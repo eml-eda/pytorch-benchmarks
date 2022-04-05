@@ -29,7 +29,7 @@ if torch.cuda.is_available():
 
 # Define the optimizer, the loss and the number of epochs
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=config['lr'])
+optimizer = optim.Adam(net.parameters(), lr=config['lr'], weight_decay=1e-4)
 checkpoint = CheckPoint('./checkpoints', net, optimizer, 'max')
 
 # Training loop

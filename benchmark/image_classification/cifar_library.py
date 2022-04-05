@@ -7,8 +7,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchsummary import summary
 from tqdm import tqdm
-
-torch.manual_seed(17)
+import numpy as np
+import torch.nn.init as init
+torch.manual_seed(43)
 
 # Function to retrieve the CIFAR10 benchmark
 def get_benchmark():
@@ -34,7 +35,7 @@ def get_benchmark():
 
 
 # Function to retrieve the training, validation and test dataloaders
-def get_dataloaders(config, train_val_set, test_set):
+def get_dataloaders(config, train_val_set, test_set, PERF_SAMPLE = True):
 
     val_len = int(config['val_split'] * len(train_val_set))
     train_len = len(train_val_set) - val_len
@@ -48,11 +49,20 @@ def get_dataloaders(config, train_val_set, test_set):
                                             batch_size=config['batch_size'],
                                             shuffle=True,
                                             num_workers=config['num_workers'])
-    test_loader = torch.utils.data.DataLoader(test_set,
-                                             batch_size=config['batch_size'],
-                                             shuffle=False,
-                                             num_workers=config['batch_size'])
 
+    if PERF_SAMPLE:
+        _idxs = np.load('perf_samples_idxs.npy')
+        test_set = torch.utils.data.Subset(test_set, _idxs)
+        test_loader = torch.utils.data.DataLoader(test_set,
+                                                 batch_size=config['batch_size'],
+                                                 shuffle=False,
+                                                 num_workers=config['batch_size'])
+    else:
+        test_loader = torch.utils.data.DataLoader(test_set,
+                                                 batch_size=config['batch_size'],
+                                                 shuffle=False,
+                                                 num_workers=config['batch_size'])
+  
     return train_loader, val_loader, test_loader
 
 
@@ -61,6 +71,7 @@ class ConvBlock(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=2,padding=1):
         super().__init__()
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
+        nn.init.kaiming_normal_(self.conv1.weight)
         self.bn = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU()
 
@@ -84,24 +95,30 @@ class ResnetV1Eembc(torch.nn.Module):
         self.inputblock = ConvBlock(in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=1)
         self.convblock1 = ConvBlock(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=1)
         self.conv1 = nn.Conv2d(16, 16, kernel_size=3, stride=1, padding=1)
+        nn.init.kaiming_normal_(self.conv1.weight)
         self.bn1 = nn.BatchNorm2d(16)
         self.relu = nn.ReLU()
 
         # Second stack
         self.convblock2 = ConvBlock(in_channels=16, out_channels=32, kernel_size=3, stride=2, padding=1)
         self.conv2y = nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1)
+        nn.init.kaiming_normal_(self.conv2y.weight)
         self.bn2 = nn.BatchNorm2d(32)
         self.conv2x = nn.Conv2d(16, 32, kernel_size=1, stride=2, padding=0)
+        nn.init.kaiming_normal_(self.conv2x.weight)
 
         # Third stack
         self.convblock3 = ConvBlock(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=1)
         self.conv3y = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
+        nn.init.kaiming_normal_(self.conv3y.weight)
         self.bn3 = nn.BatchNorm2d(64)
         self.conv3x = nn.Conv2d(32, 64, kernel_size=1, stride=2, padding=0)
+        nn.init.kaiming_normal_(self.conv3x.weight)
 
         self.avgpool = torch.nn.AvgPool2d(8)
 
         self.out = nn.Linear(64, 10)
+        nn.init.kaiming_normal_(self.out.weight)
 
 
     def forward(self, input):
@@ -275,7 +292,7 @@ def evaluate(model, criterion, data_loader, device, neval_batches = None):
       output, loss = run_model(model, image, target, criterion, device)
       acc_val = accuracy(output, target, topk=(1,))
       avgacc.update(acc_val[0], image.size(0))
-      avgloss.update(loss, image.size(0))
+      avgloss.update(loss, image.size(0))     
       if neval_batches is not None and step >= neval_batches:
         return avgloss, avgacc
   return avgloss, avgacc
