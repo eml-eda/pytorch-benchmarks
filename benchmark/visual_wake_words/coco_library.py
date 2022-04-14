@@ -252,6 +252,21 @@ class MobilenetV1(torch.nn.Module):
 
         return x
 
+def lr_schedule(optimizer, epoch):
+    lrate = 0.001
+    if epoch >=0 and epoch <=20:
+        for opt in optimizer.param_groups:
+            opt['lr'] = lrate
+    elif epoch >20 and epoch <=30:
+        for opt in optimizer.param_groups:
+            opt['lr'] = lrate/2
+            lrate = lrate/2
+    else:
+        for opt in optimizer.param_groups:
+            opt['lr'] = lrate / 4
+            lrate = lrate / 4
+    return lrate
+
 class AverageMeter(object):
 
     """Computes and stores the average and current value"""
@@ -404,6 +419,7 @@ def train_one_epoch(epoch, model, criterion, optimizer, train, val, device):
       target = target.type(torch.long)
       image, target = image.to(device), target.to(device)
       output, loss = run_model(model, image, target, criterion, device)
+      lrate = lr_schedule(optimizer, epoch)
       optimizer.zero_grad()
       loss.backward()
       optimizer.step()
@@ -411,7 +427,7 @@ def train_one_epoch(epoch, model, criterion, optimizer, train, val, device):
       avgacc.update(acc_val[0], image.size(0))
       avgloss.update(loss, image.size(0))
       if step % 100 == 99:
-        tepoch.set_postfix({'loss': avgloss, 'acc': avgacc})
+        tepoch.set_postfix({'loss': avgloss, 'acc': avgacc, 'lrate': lrate})
     if len(val) > 0:
         val_loss, val_acc = evaluate(model, criterion, val, device)
         final_metrics = {
