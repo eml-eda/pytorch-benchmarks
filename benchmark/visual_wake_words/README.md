@@ -4,6 +4,9 @@ This is the MLPerf Tiny visual wake words reference model.
 
 A MobileNet model is trained on the COCO dataset.
 
+- Model: MobileNet
+- Dataset: COCO
+
 ## Quick start
 
 Run the following commands to go through the whole training and validation process
