@@ -84,9 +84,7 @@ for idx, target_dir in enumerate(dirs):
     results = train_one_epoch(epoch, net, criterion, optimizer, trainLoader, valLoader, device)
     checkpoint(epoch, results['val_loss'])
 
-  #net.save(model_file_path)
-  #com.logger.info("save_model -> {}".format(model_file_path))
-  #print("============== END TRAINING ==============")
+  print("============== END TRAINING ==============")
 
 
 # load base_directory list for testing
@@ -133,26 +131,15 @@ for idx, target_dir in enumerate(dirs):
                                           n_fft=config["n_fft"],
                                           hop_length=config["hop_length"],
                                           power=config["power"])
-          #print("data", type(data), data)
           data = data.astype('float32')
-          #print("data float32", type(data), data.shape, data)
           data = torch.from_numpy(data)
-          #print("tensor data", type(data), data)
           pred = net(data)
-          #print("prediction", pred)
-
           data = data.cpu().detach().numpy()
           pred = pred.cpu().detach().numpy()
-          #print("pred numpy", pred.shape, pred)
           diff = data - pred
-          #print("difference", diff)
-          #print("square", numpy.square(data - pred))
           errors = numpy.mean(numpy.square(data - pred), axis=1)
-          #print(errors)
           y_pred[file_idx] = numpy.mean(errors)
-          #print(y_pred)
           anomaly_score_list.append([os.path.basename(file_path), y_pred[file_idx]])
-          #print(anomaly_score_list)
         except Exception as e:
           com.logger.error("file broken!!: {}, {}".format(file_path, e))
 
