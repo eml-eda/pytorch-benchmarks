@@ -1,13 +1,7 @@
 
-import matplotlib.pyplot as plt
-import numpy as np
-import os
-import argparse
-from tensorflow import keras
 from speech_dscnn import *
 import get_dataset as kws_data
 import kws_util
-import sys
 import torch
 import torchvision
 import torchvision.transforms as transforms

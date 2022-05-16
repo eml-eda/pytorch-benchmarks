@@ -1,19 +1,10 @@
 #!/usr/bin/env python
 
-import tensorflow as tf
-import tensorflow_datasets as tfds
-from tensorflow.lite.experimental.microfrontend.python.ops import audio_microfrontend_op as frontend_op
-from tensorflow import keras
-from tensorflow.keras import layers
 import torch
-import torchvision
-import torchvision.transforms as transforms
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 import os
 from tqdm import tqdm
-import sys
+
 
 def prepare_model_settings(label_count, args):
   """Calculates common settings needed for all models.

@@ -2,32 +2,15 @@
 
 import tensorflow as tf
 import tensorflow_datasets as tfds
-from tensorflow.lite.experimental.microfrontend.python.ops import audio_microfrontend_op as frontend_op
-from tensorflow import keras
-from tensorflow.keras import layers
 from tensorflow.python.platform import gfile
-
-import functools
-
-import matplotlib.pyplot as plt
 import numpy as np
-import os, pickle
-
+import os
 import kws_util
-import keras_model as models
 import speech_dscnn as modelsdscnn
-import sys
 import torch
-import torchvision
-import torchvision.transforms as transforms
-import torch.nn as nn
 from tqdm import tqdm
-import time
 torch.set_printoptions(precision=8)
 import torchaudio
-import torchaudio.functional as F
-import torchaudio.transforms as T
-import librosa
 
 word_labels = ["Down", "Go", "Left", "No", "Off", "On", "Right",
                "Stop", "Up", "Yes", "Silence", "Unknown"]
@@ -51,76 +34,6 @@ def convert_dataset(item):
   audio = item['audio']
   label = item['label']
   return audio, label
-
-
-def get_preprocess_audio_func(model_settings,is_training=False,background_data = []):
-  def prepare_processing_graph(next_element):
-    """Builds a TensorFlow graph to apply the input distortions.
-    Creates a graph that loads a WAVE file, decodes it, scales the volume,
-    shifts it in time, adds in background noise, calculates a spectrogram, and
-    then builds an MFCC fingerprint from that.
-    This must be called with an active TensorFlow session running, and it
-    creates multiple placeholder inputs, and one output:
-      - wav_filename_placeholder_: Filename of the WAV to load.
-      - foreground_volume_placeholder_: How loud the main clip should be.
-      - time_shift_padding_placeholder_: Where to pad the clip.
-      - time_shift_offset_placeholder_: How much to move the clip in time.
-      - background_data_placeholder_: PCM sample data for background noise.
-      - background_volume_placeholder_: Loudness of mixed-in background.
-      - mfcc_: Output 2D fingerprint of processed audio.
-    Args:
-      model_settings: Information about the current model being trained.
-    """
-    desired_samples = model_settings['desired_samples']
-    background_frequency = model_settings['background_frequency']
-    background_volume_range_= model_settings['background_volume_range_']
-
-    wav_decoder = tf.cast(next_element['audio'], tf.float32)
-    if model_settings['feature_type'] != "td_samples":
-      wav_decoder = wav_decoder/tf.reduce_max(wav_decoder)
-    else:
-      wav_decoder = wav_decoder/tf.constant(2**15,dtype=tf.float32)
-    #Previously, decode_wav was used with desired_samples as the length of array. The
-    # default option of this function was to pad zeros if the desired samples are not found
-    wav_decoder = tf.pad(wav_decoder,[[0,desired_samples-tf.shape(wav_decoder)[-1]]]) 
-    # Allow the audio sample's volume to be adjusted.
-    foreground_volume_placeholder_ = tf.constant(1,dtype=tf.float32)
-    
-    scaled_foreground = tf.multiply(wav_decoder,
-                                    foreground_volume_placeholder_)
-    # Shift the sample's start position, and pad any gaps with zeros.
-    time_shift_padding_placeholder_ = tf.constant([[2,2]], tf.int32)
-    time_shift_offset_placeholder_ = tf.constant([2],tf.int32)
-    scaled_foreground.shape
-    padded_foreground = tf.pad(scaled_foreground, time_shift_padding_placeholder_, mode='CONSTANT')
-    sliced_foreground = tf.slice(padded_foreground, time_shift_offset_placeholder_, [desired_samples])
-    
-    if model_settings['feature_type'] == 'mfcc':
-      stfts = tf.signal.stft(sliced_foreground, frame_length=model_settings['window_size_samples'], 
-                         frame_step=model_settings['window_stride_samples'], fft_length=None,
-                         window_fn=tf.signal.hann_window
-                         )
-      spectrograms = tf.abs(stfts)
-      num_spectrogram_bins = stfts.shape[-1]
-      # default values used by contrib_audio.mfcc as shown here
-      # https://kite.com/python/docs/tensorflow.contrib.slim.rev_block_lib.contrib_framework_ops.audio_ops.mfcc
-      lower_edge_hertz, upper_edge_hertz, num_mel_bins = 20.0, 4000.0, 40 
-      linear_to_mel_weight_matrix = tf.signal.linear_to_mel_weight_matrix( num_mel_bins, num_spectrogram_bins,
-                                                                           model_settings['sample_rate'],
-                                                                           lower_edge_hertz, upper_edge_hertz)
-      mel_spectrograms = tf.tensordot(spectrograms, linear_to_mel_weight_matrix, 1)
-      mel_spectrograms.set_shape(spectrograms.shape[:-1].concatenate(linear_to_mel_weight_matrix.shape[-1:]))
-      # Compute a stabilized log to get log-magnitude mel-scale spectrograms.
-      log_mel_spectrograms = tf.math.log(mel_spectrograms + 1e-6)
-      # Compute MFCCs from log_mel_spectrograms and take the first 13.
-      mfccs = tf.signal.mfccs_from_log_mel_spectrograms(log_mel_spectrograms)[..., :model_settings['dct_coefficient_count']]
-      mfccs = tf.reshape(mfccs,[model_settings['spectrogram_length'], model_settings['dct_coefficient_count'], 1])
-      next_element['audio'] = mfccs
-      #next_element['label'] = tf.one_hot(next_element['label'],12)
-      
-    return next_element
-  
-  return prepare_processing_graph
 
 
 def prepare_background_data(bg_path,BACKGROUND_NOISE_DIR_NAME):
@@ -152,7 +65,6 @@ def prepare_background_data(bg_path,BACKGROUND_NOISE_DIR_NAME):
 
 
 def get_training_data(Flags):
-  
   label_count=12
   model_settings = modelsdscnn.prepare_model_settings(label_count, Flags)
 
@@ -170,8 +82,8 @@ def get_training_data(Flags):
 
   return ds_train, ds_test, ds_val, model_settings
 
-def preprocess_pytorch(tmp_audio, tmp_label, model_settings):
 
+def preprocess_pytorch(tmp_audio, tmp_label, model_settings):
   model_settings = model_settings
   desired_samples = model_settings['desired_samples']
   tmp_audio_post = []
@@ -213,6 +125,7 @@ def preprocess_pytorch(tmp_audio, tmp_label, model_settings):
       tmp_audio_post.append(mfcc_torch_log)
 
   return tmp_audio_post, tmp_label
+
 
 class SpeechCommands(torch.utils.data.Dataset):
     def __init__(self, audio, label):
@@ -272,6 +185,7 @@ def get_benchmark(ds_train, ds_val, ds_test, model_settings):
 
   return train_set, val_set, test_set
 
+
 def get_dataloaders(config, train_set, val_set, test_set):
       train_loader = torch.utils.data.DataLoader(train_set,
                                                  batch_size=config['batch_size'],
@@ -286,6 +200,7 @@ def get_dataloaders(config, train_set, val_set, test_set):
                                                 shuffle=False,
                                                 num_workers=config['num_workers'])
       return train_loader, val_loader, test_loader
+
 
 if __name__ == '__main__':
   Flags, unparsed = kws_util.parse_command()
