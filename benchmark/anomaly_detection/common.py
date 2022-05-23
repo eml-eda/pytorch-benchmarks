@@ -233,7 +233,7 @@ def select_dirs(param, mode):
                 load base directory list of eval_data
     """
     if mode:
-        .infologger("load_directory <- development")
+        logger.info("load_directory <- development")
         dir_path = os.path.abspath("{base}/*".format(base=param["dev_directory"]))
         dirs = sorted(glob.glob(dir_path))
     else:

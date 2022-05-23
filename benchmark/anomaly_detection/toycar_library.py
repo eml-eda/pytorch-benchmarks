@@ -2,39 +2,23 @@
 # import python-library
 ########################################################################
 # default
-import csv
+
 import glob
-import argparse
-import itertools
-import re
-import sys
 import os
-
-# additional
 import numpy
-import librosa
-import librosa.core
-import librosa.feature
 from tqdm import tqdm
-
 import matplotlib
 matplotlib.use('Agg')  # No pictures displayed
-import pylab
-import librosa.display
-
 import torch
 import torchvision
 import torchvision.transforms as transforms
 import torch.nn as nn
 import torch.nn.functional
 import torch.optim as optim
-import numpy as np
 import random
 import common as com
 import eval_functions_eembc
 from sklearn import metrics
-
-#torch.manual_seed(46)
 
 ########################################################################
 

@@ -23,7 +23,7 @@ config = {
 
   # data
   "batch_size": 512,
-  "num_workers": 2,
+  "num_workers": 0,
   "val_split": 0.1,
 
   # training
