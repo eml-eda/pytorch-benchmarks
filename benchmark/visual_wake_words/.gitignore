@@ -1,0 +1,4 @@
+checkpoints/
+final_best.ckp
+vw_coco2014_96/
+.ipynb_checkpoints/
