@@ -56,12 +56,12 @@ def get_dataloaders(config, train_val_set, test_set, PERF_SAMPLE = True):
         test_loader = torch.utils.data.DataLoader(test_set,
                                                  batch_size=config['batch_size'],
                                                  shuffle=False,
-                                                 num_workers=config['batch_size'])
+                                                 num_workers=config['num_workers'])
     else:
         test_loader = torch.utils.data.DataLoader(test_set,
                                                  batch_size=config['batch_size'],
                                                  shuffle=False,
-                                                 num_workers=config['batch_size'])
+                                                 num_workers=config['num_workers'])
   
     return train_loader, val_loader, test_loader
 
@@ -304,7 +304,7 @@ def train_one_epoch(epoch, model, criterion, optimizer, train, val, device):
   avgloss = AverageMeter('2.5f')
   step = 0
   with tqdm(total=len(train), unit="batch") as tepoch:
-    tepoch.set_description(f"Epoch {epoch}")
+    tepoch.set_description(f"Epoch {epoch+1}")
     for image, target in train:
       step += 1
       tepoch.update(1)

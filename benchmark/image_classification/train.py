@@ -9,7 +9,7 @@ print("Training on:", device)
 config = {
   # data
   "batch_size": 32,
-  "num_workers": 2,
+  "num_workers": 0,
   "val_split": 0.2,
   # training
   "n_epochs": 500,
