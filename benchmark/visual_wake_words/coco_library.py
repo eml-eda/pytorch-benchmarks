@@ -89,7 +89,7 @@ def get_dataloaders(config, train_val_set, test_set):
         test_loader = torch.utils.data.DataLoader(test_set,
                                                   batch_size=config['batch_size'],
                                                   shuffle=False,
-                                                  num_workers=config['batch_size'])
+                                                  num_workers=config['num_workers'])
         return train_loader, val_loader, test_loader
     else:
         train_loader = torch.utils.data.DataLoader(train_val_set,
@@ -99,7 +99,7 @@ def get_dataloaders(config, train_val_set, test_set):
         test_loader = torch.utils.data.DataLoader(test_set,
                                                   batch_size=config['batch_size'],
                                                   shuffle=False,
-                                                  num_workers=config['batch_size'])
+                                                  num_workers=config['num_workers'])
         return train_loader, "", test_loader
 
 # I define a class ConvBlock to simplify the definition of the network later
