@@ -1,0 +1,7 @@
+torch
+torchvision
+pytorch_model_summary
+tqdm
+torchaudio
+librosa
+Pillow
