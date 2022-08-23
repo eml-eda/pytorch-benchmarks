@@ -1,10 +1,14 @@
 import torch
 from pytorch_model_summary import summary
 import pytorch_benchmarks.visual_wake_words as vww
+from pytorch_benchmarks.utils import seed_all
 
 # Check CUDA availability
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("Training on:", device)
+
+# Ensure deterministic execution
+seed = seed_all(seed=42)
 
 # Get the Data
 datasets = vww.get_data()

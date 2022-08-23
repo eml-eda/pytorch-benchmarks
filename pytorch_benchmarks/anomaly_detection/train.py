@@ -1,10 +1,14 @@
 from typing import Dict
 from tqdm import tqdm
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from sklearn import metrics
 from torch.utils.data import DataLoader
-from pytorch_benchmarks.utils import AverageMeter
+from pytorch_benchmarks.utils import AverageMeter, calculate_ae_accuracy, \
+    calculate_ae_pr_accuracy, calculate_ae_auc
+from .data import _file_to_vector_array
 
 
 def get_default_optimizer(net: nn.Module) -> optim.Optimizer:
@@ -74,3 +78,42 @@ def evaluate(
             'loss': avgloss.get()
         }
     return final_metrics
+
+
+def test(ds_test, model):
+    test_metrics = {}
+    for machine in ds_test:
+        y_pred = [0. for k in range(len(machine))]
+        y_true = []
+        machine_id = ''
+        for file_idx, element in tqdm(enumerate(machine), total=len(machine), desc="preprocessing"):
+            file_path, label, id = element
+            machine_id = id[0]
+            y_true.append(label[0].item())
+            data = _file_to_vector_array(file_path[0],
+                                         n_mels=128,
+                                         frames=5,
+                                         n_fft=1024,
+                                         hop_length=512,
+                                         power=2.0
+                                         )
+            data = data.astype('float32')
+            data = torch.from_numpy(data)
+            pred = model(data)
+            data = data.cpu().detach().numpy()
+            pred = pred.cpu().detach().numpy()
+            errors = np.mean(np.square(data - pred), axis=1)
+            y_pred[file_idx] = np.mean(errors)
+        y_true = np.array(y_true, dtype='float64')
+        y_pred = np.array(y_pred, dtype='float64')
+        acc = calculate_ae_accuracy(y_pred, y_true)
+        pr_acc = calculate_ae_pr_accuracy(y_pred, y_true)
+        auc = calculate_ae_auc(y_pred, y_true)
+        p_auc = metrics.roc_auc_score(y_true, y_pred, max_fpr=0.1)
+        test_metrics[machine_id] = {
+            'acc': acc,
+            'pr_acc': pr_acc,
+            'auc': auc,
+            'p_auc': p_auc
+        }
+    return test_metrics

@@ -2,10 +2,14 @@ import torch
 from pytorch_model_summary import summary
 import numpy as np
 import pytorch_benchmarks.anomaly_detection as amd
+from pytorch_benchmarks.utils import seed_all
 
 # Check CUDA availability
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("Training on:", device)
+
+# Ensure deterministic execution
+seed = seed_all(seed=42)
 
 # Get the Data
 datasets = amd.get_data()
@@ -31,7 +35,7 @@ for epoch in range(N_EPOCHS):
     _ = amd.train_one_epoch(epoch, model, criterion, optimizer, train_dl, val_dl, device)
 
 # Testing model
-results = amd.test_model(test_dl, model)
+results = amd.test(test_dl, model)
 performance = []
 print("\nTest results:")
 for k, v in results.items():

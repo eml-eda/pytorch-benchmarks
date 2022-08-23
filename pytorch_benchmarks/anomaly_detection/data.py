@@ -10,8 +10,10 @@ from tqdm import tqdm
 import torch
 import itertools
 import re
-from sklearn import metrics
 from torch.utils.data import Dataset, DataLoader, random_split
+
+URL_TRAIN = 'https://zenodo.org/record/3678171/files/dev_data_ToyCar.zip?download=1'
+URL_TEST = 'https://zenodo.org/record/3678171/files/dev_data_ToyCar.zip?download=1'
 
 
 def _get_machine_id_list_for_test(target_dir=os.path.join(os.getcwd(), 'amd_data')):
@@ -35,78 +37,6 @@ def _get_machine_id_list_for_test(target_dir=os.path.join(os.getcwd(), 'amd_data
     machine_id_list = sorted(list(set(itertools.chain.from_iterable(
         [re.findall('id_[0-9][0-9]', ext_id) for ext_id in file_paths]))))
     return machine_id_list
-
-
-def _calculate_ae_accuracy(y_pred, y_true):
-    thresholds = np.amin(y_pred) + np.arange(0.0, 1.0, .01) * (np.amax(y_pred) - np.amin(y_pred))
-    accuracy = 0
-    for threshold in thresholds:
-        y_pred_binary = (y_pred > threshold).astype(int)
-        correct = np.sum(y_pred_binary == y_true)
-        accuracy_tmp = 100 * correct / len(y_pred_binary)
-        if accuracy_tmp > accuracy:
-            accuracy = accuracy_tmp
-    return accuracy
-
-
-def _calculate_ae_pr_accuracy(y_pred, y_true):
-    # initialize all arrays
-    thresholds = np.amin(y_pred) + np.arange(0.0, 1.0, .01) * (np.amax(y_pred) - np.amin(y_pred))
-    accuracy = 0
-    n_normal = np.sum(y_true == 0)
-    precision = np.zeros(len(thresholds))
-    recall = np.zeros(len(thresholds))
-
-    # Loop on all the threshold values
-    for threshold_item in range(len(thresholds)):
-        threshold = thresholds[threshold_item]
-        # Binarize the result
-        y_pred_binary = (y_pred > threshold).astype(int)
-        # Build matrix of TP, TN, FP and FN
-        false_positive = np.sum((y_pred_binary[0:n_normal] == 1))
-        true_positive = np.sum((y_pred_binary[n_normal:] == 1))
-        false_negative = np.sum((y_pred_binary[n_normal:] == 0))
-        # Calculate and store precision and recall
-        precision[threshold_item] = true_positive / (true_positive + false_positive)
-        recall[threshold_item] = true_positive / (true_positive + false_negative)
-        # See if the accuracy has improved
-        accuracy_tmp = 100 * (precision[threshold_item] + recall[threshold_item]) / 2
-        if accuracy_tmp > accuracy:
-            accuracy = accuracy_tmp
-    return accuracy
-
-
-def _calculate_ae_auc(y_pred, y_true):
-    """
-    Autoencoder ROC AUC calculation
-    """
-    # initialize all arrays
-    thresholds = np.amin(y_pred) + np.arange(0.0, 1.01, .01) * (np.amax(y_pred) - np.amin(y_pred))
-    roc_auc = 0
-
-    n_normal = np.sum(y_true == 0)
-    tpr = np.zeros(len(thresholds))
-    fpr = np.zeros(len(thresholds))
-
-    # Loop on all the threshold values
-    for threshold_item in range(1, len(thresholds)):
-        threshold = thresholds[threshold_item]
-        # Binarize the result
-        y_pred_binary = (y_pred > threshold).astype(int)
-        # Build TP and FP
-        tpr[threshold_item] = np.sum((y_pred_binary[n_normal:] == 1)
-                                     ) / float(len(y_true) - n_normal)
-        fpr[threshold_item] = np.sum((y_pred_binary[0:n_normal] == 1)) / float(n_normal)
-
-    # Force boundary condition
-    fpr[0] = 1
-    tpr[0] = 1
-
-    # Integrate
-    for threshold_item in range(len(thresholds) - 1):
-        roc_auc += .5 * (tpr[threshold_item] + tpr[threshold_item + 1]) * (
-            fpr[threshold_item] - fpr[threshold_item + 1])
-    return roc_auc
 
 
 def _file_to_vector_array(file_name,
@@ -295,71 +225,23 @@ class ToyCarTest(Dataset):
         return len(self.set)
 
 
-def test_model(ds_test,
-               model
-               ):
-    test_metrics = {}
-    for machine in ds_test:
-        y_pred = [0. for k in range(len(machine))]
-        y_true = []
-        machine_id = ''
-        for file_idx, element in tqdm(enumerate(machine), total=len(machine), desc="preprocessing"):
-            file_path, label, id = element
-            machine_id = id[0]
-            y_true.append(label[0].item())
-            data = _file_to_vector_array(file_path[0],
-                                         n_mels=128,
-                                         frames=5,
-                                         n_fft=1024,
-                                         hop_length=512,
-                                         power=2.0
-                                         )
-            data = data.astype('float32')
-            data = torch.from_numpy(data)
-            pred = model(data)
-            data = data.cpu().detach().numpy()
-            pred = pred.cpu().detach().numpy()
-            errors = np.mean(np.square(data - pred), axis=1)
-            y_pred[file_idx] = np.mean(errors)
-        y_true = np.array(y_true, dtype='float64')
-        y_pred = np.array(y_pred, dtype='float64')
-        acc = _calculate_ae_accuracy(y_pred, y_true)
-        pr_acc = _calculate_ae_pr_accuracy(y_pred, y_true)
-        auc = _calculate_ae_auc(y_pred, y_true)
-        p_auc = metrics.roc_auc_score(y_true, y_pred, max_fpr=0.1)
-        test_metrics[machine_id] = {
-            'acc': acc,
-            'pr_acc': pr_acc,
-            'auc': auc,
-            'p_auc': p_auc
-        }
-    return test_metrics
-
-
 def get_data(data_dir=None,
-             url1='https://zenodo.org/record/3678171/files/dev_data_ToyCar.zip?download=1',
-             url2='https://zenodo.org/record/3727685/files/eval_data_train_ToyCar.zip?download=1',
-             ds_name1='dev_data_ToyCar.zip',
-             ds_name2='eval_data_train_ToyCar.zip',
-             val_split=0.1,
+             val_split=0.1
              ) -> Tuple[Dataset, Dataset, list[Dataset]]:
     if data_dir is None:
         data_dir = os.path.join(os.getcwd(), 'amd_data')
-    filename1 = data_dir + '/' + ds_name1
-    filename2 = data_dir + '/' + ds_name2
-    if not os.path.exists(filename1) or not os.path.exists(filename2):
+    if not os.path.exists(data_dir):
         os.makedirs(data_dir)
-        ds_dev = requests.get(url1 + '/' + ds_name1)
-        with open(filename1, 'wb') as f:
+        ds_dev = requests.get(URL_TRAIN)
+        with open(data_dir + '/dev_data_ToyCar.zip', 'wb') as f:
             f.write(ds_dev.content)
-        ds_eval = requests.get(url2 + '/' + ds_name2)
-        with open(filename2, 'wb') as f:
+        ds_eval = requests.get(URL_TEST)
+        with open(data_dir + '/eval_data_train_ToyCar.zip', 'wb') as f:
             f.write(ds_eval.content)
-
-    with zipfile.ZipFile(filename1, 'r') as zip_ref:
-        zip_ref.extractall(data_dir)
-    with zipfile.ZipFile(filename2, 'r') as zip_ref:
-        zip_ref.extractall(data_dir)
+        with zipfile.ZipFile(data_dir + '/dev_data_ToyCar.zip', 'r') as zip_ref:
+            zip_ref.extractall(data_dir)
+        with zipfile.ZipFile(data_dir + '/eval_data_train_ToyCar.zip', 'r') as zip_ref:
+            zip_ref.extractall(data_dir)
 
     ds_train_val = ToyCar(data_dir)
     val_len = int(val_split * len(ds_train_val))
