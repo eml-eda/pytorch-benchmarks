@@ -230,17 +230,19 @@ def get_data(data_dir=None,
              ) -> Tuple[Dataset, Dataset, list[Dataset]]:
     if data_dir is None:
         data_dir = os.path.join(os.getcwd(), 'amd_data')
+    dev_zip = os.path.join(data_dir, 'dev_data_ToyCar.zip')
+    eval_zip = os.path.join(data_dir, 'eval_data_train_ToyCar.zip')
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
         ds_dev = requests.get(URL_TRAIN)
-        with open(data_dir + '/dev_data_ToyCar.zip', 'wb') as f:
+        with open(dev_zip, 'wb') as f:
             f.write(ds_dev.content)
         ds_eval = requests.get(URL_TEST)
-        with open(data_dir + '/eval_data_train_ToyCar.zip', 'wb') as f:
+        with open(eval_zip, 'wb') as f:
             f.write(ds_eval.content)
-        with zipfile.ZipFile(data_dir + '/dev_data_ToyCar.zip', 'r') as zip_ref:
+        with zipfile.ZipFile(dev_zip, 'r') as zip_ref:
             zip_ref.extractall(data_dir)
-        with zipfile.ZipFile(data_dir + '/eval_data_train_ToyCar.zip', 'r') as zip_ref:
+        with zipfile.ZipFile(eval_zip, 'r') as zip_ref:
             zip_ref.extractall(data_dir)
 
     ds_train_val = ToyCar(data_dir)

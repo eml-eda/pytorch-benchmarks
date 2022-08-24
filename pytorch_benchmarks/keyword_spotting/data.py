@@ -250,6 +250,8 @@ class SpeechCommands(Dataset):
         self._path = os.path.join(root, folder_in_archive)
 
         if download:
+            if not os.path.exists(root):
+                os.makedirs(root)
             if not os.path.isdir(self._path):
                 if not os.path.isfile(archive):
                     checksum = _CHECKSUMS.get(url, None)
@@ -304,7 +306,9 @@ def get_data(data_dir=None, one_dim=False
     return ds_train, ds_val, ds_test
 
 
-def build_dataloaders(datasets: Tuple[Dataset, ...], batch_size=100, num_workers=2
+def build_dataloaders(datasets: Tuple[Dataset, ...],
+                      batch_size=100,
+                      num_workers=2
                       ) -> Tuple[DataLoader, DataLoader, DataLoader]:
     train_set, val_set, test_set = datasets
     train_loader = DataLoader(

@@ -121,6 +121,12 @@ def calculate_ae_auc(y_pred, y_true):
     return roc_auc
 
 
+def run_model(model, audio, target, criterion, device):
+    output = model(audio)
+    loss = criterion(output, target)
+    return output, loss
+
+
 def seed_all(seed=None):
     if seed is not None:
         random.seed(seed)
