@@ -17,6 +17,7 @@ def get_reference_model(model_name: str, model_config: Optional[Dict[str, Any]] 
                 "dropout": 0.5,
                 "grad_clip": -1,
                 "use_bias": True,
+                "use_dilation": True,
                 "avg_pool": True,
             }
         return TCResNet14(model_config)
@@ -28,8 +29,10 @@ def get_reference_model(model_name: str, model_config: Optional[Dict[str, Any]] 
 
 class TCResNet14(nn.Module):
     """
-    TCResNet14 architecture
+    TCResNet14 architecture used for unit tests.
     Variable number of repeated instances of TemporalBlock1 and TemporalBlock2.
+
+    Testing on this network verifies that our conversion methods can handle residual connections
     """
 
     def __init__(self, config):
@@ -52,6 +55,7 @@ class TCResNet14(nn.Module):
             num_channels=self.config['num_channels'][1:],
             kernel_size=self.config['kernel_size'],
             use_bias=self.config['use_bias'],
+            use_dilation=self.config['use_dilation'],
         )
 
         if self.config['avg_pool']:
@@ -92,7 +96,7 @@ class TempNet(nn.Module):
     TempBlock2 defined with a specific parameter.
     """
 
-    def __init__(self, num_inputs, num_channels, kernel_size, use_bias=True):
+    def __init__(self, num_inputs, num_channels, kernel_size, use_bias=True, use_dilation=True):
         super(TempNet, self).__init__()
         layers = list()
         num_levels = len(num_channels)
@@ -100,11 +104,16 @@ class TempNet(nn.Module):
         for i in range(num_levels):
             dilation_size = list()
             k = list()
-            dilation_size.append(2 ** i)
-            dilation_size.append(2 ** i)
-
-            k.append(ceil(original_rf[i] / dilation_size[0]))
-            k.append(ceil(original_rf[i] / dilation_size[1]))
+            if use_dilation:
+                dilation_size.append(2 ** i)
+                dilation_size.append(2 ** i)
+                k.append(ceil(original_rf[i] / dilation_size[0]))
+                k.append(ceil(original_rf[i] / dilation_size[1]))
+            else:
+                dilation_size.append(1)
+                dilation_size.append(1)
+                k.append(original_rf[i])
+                k.append(original_rf[i])
 
             in_channels = [
                 num_inputs, num_channels[0]] if i == 0 else [num_channels[i - 1], num_channels[i]]
