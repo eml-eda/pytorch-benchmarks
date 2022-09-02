@@ -1,3 +1,4 @@
+import pathlib
 import random
 
 import numpy as np
@@ -30,6 +31,92 @@ class AverageMeter(object):
     def __str__(self):
         fmtstr = '{:' + self.fmt + '}'
         return fmtstr.format(float(self.avg))
+
+
+class CheckPoint():
+    """
+    save/load a checkpoint based on a metric
+    """
+    def __init__(self, dir, net, optimizer, mode='min', fmt='ck_{epoch:03d}.pt'):
+        if mode not in ['min', 'max']:
+            raise ValueError("Early-stopping mode not supported") 
+        self.dir = pathlib.Path(dir)
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.mode = mode
+        self.format = fmt
+        self.net = net
+        self.optimizer = optimizer
+        self.val = None
+        self.epoch = None
+        self.best_path = None
+
+    def __call__(self, epoch, val):
+        val = float(val)
+        if self.val == None:
+            self.update_and_save(epoch, val)
+        elif self.mode == 'min' and val < self.val:
+            self.update_and_save(epoch, val)
+        elif self.mode == 'max' and val > self.val:
+            self.update_and_save(epoch, val)
+
+    def update_and_save(self, epoch, val):
+        self.epoch = epoch
+        self.val = val
+        self.update_best_path()
+        self.save()
+
+    def update_best_path(self):
+        self.best_path = self.dir / self.format.format(**self.__dict__)
+
+    def save(self, path=None):
+        if path is None:
+            path = self.best_path
+        torch.save({
+                  'epoch': self.epoch,
+                  'model_state_dict': self.net.state_dict(),
+                  'optimizer_state_dict': self.optimizer.state_dict(),
+                  'val': self.val,
+                  }, path)
+
+    def load_best(self):
+        if self.best_path is None:
+            raise FileNotFoundError("Best path not set!")
+        self.load(self.best_path)
+
+    def load(self, path):
+        checkpoint = torch.load(path)
+        self.net.load_state_dict(checkpoint['model_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+
+class EarlyStopping():
+    """
+    stop the training when the loss does not improve.
+    """
+    def __init__(self, patience=20, mode='min'):
+        if mode not in ['min', 'max']:
+            raise ValueError("Early-stopping mode not supported")
+        self.patience = patience
+        self.mode = mode
+        self.counter = 0
+        self.best_val = None
+
+    def __call__(self, val):
+        val = float(val)
+        if self.best_val is None:
+            self.best_val = val
+        elif self.mode == 'min' and val < self.best_val:
+            self.best_val = val
+            self.counter = 0
+        elif self.mode == 'max' and val > self.best_val:
+            self.best_val = val
+            self.counter = 0
+        else:
+            self.counter += 1
+            if self.counter >= self.patience:
+                print("Early Stopping!")
+                return True
+        return False
 
 
 def accuracy(output, target, topk=(1,)):
@@ -119,12 +206,6 @@ def calculate_ae_auc(y_pred, y_true):
         roc_auc += .5 * (tpr[threshold_item] + tpr[threshold_item + 1]) * (
             fpr[threshold_item] - fpr[threshold_item + 1])
     return roc_auc
-
-
-def run_model(model, audio, target, criterion, device):
-    output = model(audio)
-    loss = criterion(output, target)
-    return output, loss
 
 
 def seed_all(seed=None):
