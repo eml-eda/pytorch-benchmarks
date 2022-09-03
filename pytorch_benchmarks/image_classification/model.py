@@ -97,7 +97,8 @@ class ResNet8(torch.nn.Module):
         x = self.relu(x)
 
         x = self.avgpool(x)         # [1, 1, 64]
-        x = torch.squeeze(x)        # [64]
+        # x = torch.squeeze(x)        # [64]
+        x = torch.flatten(x, 1)
         x = self.out(x)             # [10]
 
         return x
