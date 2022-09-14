@@ -442,7 +442,8 @@ class DSCnn(torch.nn.Module):
 
         x = self.dropout2(x)
         x = self.avgpool(x)
-        x = torch.squeeze(x)
+        # x = torch.squeeze(x)
+        x = torch.flatten(x, 1)
         x = self.out(x)
 
         return x
