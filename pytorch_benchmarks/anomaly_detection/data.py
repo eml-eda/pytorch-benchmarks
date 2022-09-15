@@ -250,7 +250,7 @@ def get_data(data_dir=None,
     train_len = len(ds_train_val) - val_len
     ds_train, ds_val = random_split(ds_train_val, [train_len, val_len])
 
-    machine_id_list = _get_machine_id_list_for_test()
+    machine_id_list = _get_machine_id_list_for_test(target_dir=data_dir)
     ds_test = []
     for id in machine_id_list:
         ds_test.append(ToyCarTest(data_dir, id))
