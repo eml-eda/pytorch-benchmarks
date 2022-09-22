@@ -81,6 +81,7 @@ def evaluate(
 
 
 def test(ds_test, model):
+    model.eval()
     test_metrics = {}
     for machine in ds_test:
         y_pred = [0. for k in range(len(machine))]
