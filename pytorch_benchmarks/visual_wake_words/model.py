@@ -188,7 +188,7 @@ class MobileNet(torch.nn.Module):
         x = self.pointwise14(x)     # [ 3,  3, 256]
 
         x = self.avgpool(x)         # [ 1,  1, 256]
-        x = torch.squeeze(x)        # [256]
+        x = torch.flatten(x, 1)     # [256]
         x = self.out(x)             # [2]
 
         return x
