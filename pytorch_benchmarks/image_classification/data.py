@@ -5,6 +5,7 @@ import numpy as np
 import io
 import torchvision
 import torchvision.transforms as transforms
+from pathlib import Path
 from torch.utils.data import Dataset, DataLoader, Subset, random_split
 
 
@@ -27,16 +28,22 @@ def get_data(data_dir=None,
     test_to_tensor = transforms.Compose([
         transforms.ToTensor()
     ])
-
     ds_train_val = torchvision.datasets.CIFAR10(root=data_dir, train=True,
                                                 download=True, transform=transform)
     ds_test = torchvision.datasets.CIFAR10(root=data_dir, train=False,
                                            download=True, transform=test_to_tensor)
 
     if perf_samples:
-        response = requests.get(url_tinyml + file_idxs)
-        response.raise_for_status()
-        _idxs = np.load(io.BytesIO(response.content))
+        my_file = Path(data_dir+"/perf_samples_idxs.npy")
+        if my_file.is_file():
+            print("present")
+        else:
+            print("not present")
+            response = requests.get(url_tinyml + file_idxs)
+            response.raise_for_status()
+            with open(data_dir+"/perf_samples_idxs.npy", "wb") as f:
+                f.write(response.content)
+        _idxs = np.load(data_dir+"/perf_samples_idxs.npy")
         ds_test = Subset(ds_test, _idxs)
 
     val_len = int(val_split * len(ds_train_val))
