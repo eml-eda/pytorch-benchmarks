@@ -2,7 +2,6 @@ from typing import Tuple
 import os
 import requests
 import numpy as np
-import io
 import torchvision
 import torchvision.transforms as transforms
 from pathlib import Path

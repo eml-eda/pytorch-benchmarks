@@ -5,3 +5,6 @@ tqdm
 torchaudio
 librosa
 Pillow
+pandas
+scikit-learn
+scikit-image
