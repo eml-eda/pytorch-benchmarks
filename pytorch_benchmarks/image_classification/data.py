@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader, Subset, random_split
 
 def get_data(data_dir=None,
              val_split=0.2,
-             perf_samples=True,
+             perf_samples=False,
              url_tinyml='https://github.com/mlcommons/tiny/raw/master/benchmark/training/',
              file_idxs='image_classification/perf_samples_idxs.npy'
              ) -> Tuple[Dataset, ...]:
