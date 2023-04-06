@@ -79,6 +79,7 @@ for dataset in ds_linaige_cv:
 
     # Extracting all datasets from generator
     x_train, y_train, x_test, y_test, class_weight = dataset
+    print('Input shape:', x_train.shape)
     # Passing y_train to get_default_criterion(classification, class_weight=None) funtion to get 'crossEntropy' bassed on class_weights
     criterion = train_module.get_default_criterion(classification=classification, class_weight=class_weight)
     # criterion = train_module.get_default_criterion(classification=classification)
