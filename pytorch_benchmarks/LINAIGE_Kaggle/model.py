@@ -332,7 +332,7 @@ def build_CNN3_FC1_pc(channel1:int, channel2:int, classification:bool, win_size:
 
     model = CNN3_FC1_pc(channel1, channel2, classification, win_size)
     
-    x = torch.zeros((1, win_size, 8, 8))  # example input
+    x = torch.zeros((2, win_size, 8, 8))  # example input
     y = model(x)
     
     # save the model summary
@@ -404,7 +404,7 @@ def build_CNN3_FC2_pc(channel1:int, channel2:int, classification:bool, win_size:
 
     model = CNN3_FC2_pc(channel1, channel2, classification, win_size)
     
-    x = torch.zeros((1, win_size, 8, 8))  # example input
+    x = torch.zeros((2, win_size, 8, 8))  # example input
     y = model(x)
     
     # save the model summary
