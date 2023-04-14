@@ -2,5 +2,6 @@ build/*
 dist/*
 pytorch_benchmarks.egg-info/*
 hrd_data/*
+db6_data/*
 *.pyc
 data/*
