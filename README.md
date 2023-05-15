@@ -1,5 +1,5 @@
 # Pytorch Benchmarks
-`pytorch-benchmarks` is the **INTERNAL** benchmark library of the **eml** branch of the **EDA** group within Politecnico di Torino.
+`pytorch-benchmarks` is the §benchmark library of the **eml** branch of the **EDA** group within Politecnico di Torino.
 
 The library is entirely written in pytorch and addresses the training of DNNs models on edge-relevant use-cases.
 
@@ -62,13 +62,13 @@ This file is mandatory to identify the parent directory as a python package and 
 To gain more insights about how this file is structurated and about how the user can develop one on its own, please consult one of the different `__init__.py` files already included in the library. E.g., [`image_classification/__init__.py`](./pytorch_benchmarks/image_classification/__init__.py).
 
 ### Example Scripts
-Finally, for each benchmark an end-to-end example script is provided:
-1. [Image Classification Example](image_classification_example.py)
-2. [Keyword Spotting Example](keyword_spotting_example.py)
-3. [Visual Wake Words Example](visual_wake_words_example.py)
-4. [Anomaly Detection Example](anomaly_detection_example.py)
-5. [Heart Rate Detection Example](hr_detection_example.py)
-6. [Tiny ImageNet Example](tiny_imagenet_example.py)
+Finally, for each benchmark an end-to-end example script is provided in the `examples` directory:
+1. [Image Classification Example](examples/image_classification_example.py)
+2. [Keyword Spotting Example](examples/keyword_spotting_example.py)
+3. [Visual Wake Words Example](examples/visual_wake_words_example.py)
+4. [Anomaly Detection Example](examples/anomaly_detection_example.py)
+5. [Heart Rate Detection Example](examples/hr_detection_example.py)
+6. [Tiny ImageNet Example](examples/tiny_imagenet_example.py)
 
 Each example shows how to use the different functions in order to build a neat and simple DNN training.
 
