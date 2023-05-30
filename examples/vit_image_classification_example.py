@@ -30,14 +30,14 @@ print("Training on:", device)
 seed = seed_all(seed=42)
 
 # impose dataset information
-dataset_name = 'cifar10'
-num_classes = 10
+dataset_name = 'tiny-imagenet'
+num_classes = 200
 
 # impose pretrained model
 model_name = 'google/vit-base-patch16-224-in21k'
 
 # Get the Data
-datasets = icl.get_data(dataset_name, preprocessor_name=model_name)
+datasets = icl.get_data(dataset_name, preprocessor_name=model_name, download=True)
 dataloaders = icl.build_dataloaders(datasets, num_workers=os.cpu_count())
 train_dl, val_dl, test_dl = dataloaders
 

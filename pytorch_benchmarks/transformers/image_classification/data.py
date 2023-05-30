@@ -21,6 +21,7 @@ import os
 import torch
 from torchvision import datasets, transforms
 from transformers import ViTImageProcessor
+import torchvision.datasets.utils as ds_utils
 
 def get_data(dataset: str,
              validation_split: float=0.2,
@@ -61,8 +62,10 @@ def get_data(dataset: str,
     dataset = dataset.lower()
     if dataset == 'cifar10':
         train_dataset, test_dataset = get_cifar10(data_dir, download, train_transform, test_transform)
+    elif dataset == 'tiny-imagenet':
+        train_dataset, test_dataset = get_tiny_imagenet(data_dir, download, train_transform, test_transform)
     else:
-        raise ValueError(f'Unknown dataset: {dataset}, please choose between: cifar10')
+        raise ValueError(f'Unknown dataset: {dataset}, please choose between: cifar10, tiny-imagenet')
 
     # split train and validation
     train_size = len(train_dataset)
@@ -75,6 +78,18 @@ def get_data(dataset: str,
 def get_cifar10(data_dir: str, download: bool, train_transform, test_transform):
     train_dataset = datasets.CIFAR10(root=data_dir, train=True, download=download, transform=train_transform)
     test_dataset = datasets.CIFAR10(root=data_dir, train=False, download=download, transform=test_transform)
+    return train_dataset, test_dataset
+
+def get_tiny_imagenet(data_dir: str, download: bool, train_transform, test_transform):
+    URL = 'http://cs231n.stanford.edu/tiny-imagenet-200.zip'
+    # check if dataset is already downloaded
+    is_downloaded = os.path.exists(os.path.join(data_dir, 'tiny-imagenet-200.zip')) and os.path.exists(os.path.join(data_dir, 'tiny-imagenet-200'))
+    assert download or is_downloaded, 'Dataset is not downloaded or not decompressed, please set download=True or decompress the dataset manually'
+    if download and not is_downloaded:
+        ds_utils.download_and_extract_archive(URL, data_dir)
+        assert ds_utils.check_integrity(os.path.join(data_dir, 'tiny-imagenet-200.zip'), '90528d7ca1a48142e341f4ef8d21d0de'), 'Downloaded dataset does not match the expected checksum'
+    train_dataset = datasets.ImageFolder(root=os.path.join(data_dir, 'tiny-imagenet-200', 'train'), transform=train_transform)
+    test_dataset = datasets.ImageFolder(root=os.path.join(data_dir, 'tiny-imagenet-200', 'val'), transform=test_transform)
     return train_dataset, test_dataset
 
 def build_dataloaders(datasets: tuple, batch_size: int = 32, num_workers: int = 2):
