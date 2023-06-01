@@ -18,6 +18,7 @@
 # *----------------------------------------------------------------------------*
 
 import os
+import warnings
 import torch
 from torchvision import datasets, transforms
 from transformers import ViTImageProcessor
@@ -64,8 +65,14 @@ def get_data(dataset: str,
         train_dataset, test_dataset = get_cifar10(data_dir, download, train_transform, test_transform)
     elif dataset == 'tiny-imagenet':
         train_dataset, test_dataset = get_tiny_imagenet(data_dir, download, train_transform, test_transform)
+    elif dataset == 'imagenet':
+        if download:
+            warnings.warn("""Unfortunately, ImageNet cannot be downloaded automatically,
+                             please download it manually and set download=False, and 
+                             specify the path to the dataset""", RuntimeWarning)
+        train_dataset, test_dataset = get_imagenet(data_dir, train_transform, test_transform)
     else:
-        raise ValueError(f'Unknown dataset: {dataset}, please choose between: cifar10, tiny-imagenet')
+        raise ValueError(f"Unknown dataset: {dataset}, please choose between: cifar10, tiny-imagenet, imagenet")
 
     # split train and validation
     train_size = len(train_dataset)
@@ -84,12 +91,17 @@ def get_tiny_imagenet(data_dir: str, download: bool, train_transform, test_trans
     URL = 'http://cs231n.stanford.edu/tiny-imagenet-200.zip'
     # check if dataset is already downloaded
     is_downloaded = os.path.exists(os.path.join(data_dir, 'tiny-imagenet-200.zip')) and os.path.exists(os.path.join(data_dir, 'tiny-imagenet-200'))
-    assert download or is_downloaded, 'Dataset is not downloaded or not decompressed, please set download=True or decompress the dataset manually'
+    assert download or is_downloaded, "Dataset is not downloaded or not decompressed, please set download=True or decompress the dataset manually"
     if download and not is_downloaded:
         ds_utils.download_and_extract_archive(URL, data_dir)
-        assert ds_utils.check_integrity(os.path.join(data_dir, 'tiny-imagenet-200.zip'), '90528d7ca1a48142e341f4ef8d21d0de'), 'Downloaded dataset does not match the expected checksum'
+        assert ds_utils.check_integrity(os.path.join(data_dir, 'tiny-imagenet-200.zip'), '90528d7ca1a48142e341f4ef8d21d0de'), "Downloaded dataset does not match the expected checksum"
     train_dataset = datasets.ImageFolder(root=os.path.join(data_dir, 'tiny-imagenet-200', 'train'), transform=train_transform)
     test_dataset = datasets.ImageFolder(root=os.path.join(data_dir, 'tiny-imagenet-200', 'val'), transform=test_transform)
+    return train_dataset, test_dataset
+
+def get_imagenet(data_dir: str, train_transform, test_transform):
+    train_dataset = datasets.ImageNet(root, split='train', transform=train_transform)
+    test_dataset = datasets.ImageNet(root, split='val', transform=test_transform)
     return train_dataset, test_dataset
 
 def build_dataloaders(datasets: tuple, batch_size: int = 32, num_workers: int = 2):
