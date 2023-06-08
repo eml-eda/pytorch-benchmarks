@@ -18,35 +18,14 @@
 # *----------------------------------------------------------------------------*
 import torch
 import torch.nn as nn
-from transformers import ViTModel, ViTConfig
-
-def reset_weights(m):
-    if isinstance(m, torch.nn.Conv2d) or isinstance(m, torch.nn.Linear):
-        m.reset_parameters() 
-
-class ViTClassifier(nn.Module):
-    def __init__(self, model_name: str, num_classes:int, is_encoder_frozen: bool, from_scratch: bool):
-        super(ViTClassifier, self).__init__()
-        if model_name == '':
-            self.vit = ViTModel(ViTConfig())
-        else:
-            self.vit = ViTModel.from_pretrained(model_name)
-        self.dropout = nn.Dropout(0.1)
-        self.fc = nn.Linear(self.vit.config.hidden_size, num_classes)
-
-        for param in self.vit.parameters():
-            param.requires_grad = not is_encoder_frozen
-
-        if from_scratch:
-            self.apply(reset_weights)
+from timm.models import create_model
 
 
-    def forward(self, x):
-        # access the last hidden state of the [CLS] token
-        x = self.vit(pixel_values=x, return_dict=True)['last_hidden_state'][:, 0]
-        x = self.dropout(x)
-        return self.fc(x)
+def get_reference_model(num_classes: int, is_encoder_frozen: bool, from_scratch: bool):
+    model = create_model('vit_base_patch16_224', pretrained=not from_scratch, drop_path_rate=0.1)
 
-def get_reference_model(model_name: str, num_classes: int, is_encoder_frozen: bool, from_scratch: bool):
-    return ViTClassifier(model_name, num_classes, is_encoder_frozen, from_scratch)
-
+    if is_encoder_frozen:
+        for param in model.parameters():
+            param.requires_grad = False
+    model.reset_classifier(num_classes=num_classes)
+    return model

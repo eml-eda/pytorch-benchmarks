@@ -18,14 +18,18 @@
 # *----------------------------------------------------------------------------*
 import torch
 import torch.nn as nn
-from pytorch_benchmarks.utils import AverageMeter, accuracy
+from pytorch_benchmarks.utils import AverageMeter
 from tqdm import tqdm
+from timm.utils import accuracy
+from timm.loss.cross_entropy import SoftTargetCrossEntropy
+from timm.data.mixup import Mixup
+from timm.data.random_erasing import RandomErasing
 
-def get_default_optimizer(model: nn.Module, lr: float = 1e-3) -> torch.optim.Optimizer:
+def get_default_optimizer(model: nn.Module, lr: float = 1e-3, weight_decay: float = 0.05) -> torch.optim.Optimizer:
     return torch.optim.AdamW(model.parameters(), lr=lr)
 
 def get_default_criterion() -> nn.Module:
-    return nn.CrossEntropyLoss()
+    return SoftTargetCrossEntropy()
 
 def train_one_epoch(
         epoch: int,
@@ -39,17 +43,27 @@ def train_one_epoch(
     avgacc = AverageMeter('6.2f')
     avgloss = AverageMeter('2.5f')
     percentile = int(len(train) * 0.1)
+
+    mixup = Mixup(mixup_alpha=0.8, cutmix_alpha=1.0, label_smoothing=0.1, num_classes=model.num_classes)
+    random_erasing = RandomErasing(probability=0.25, mode='pixel')
+
+    scaler = torch.cuda.amp.GradScaler()
     with tqdm(total=len(train)) as tepoch:
         tepoch.set_description(f"Epoch {epoch + 1}")
         for step, (data, target) in enumerate(train):
             batch_size = data.size(0)
             data, target = data.to(device), target.to(device)
-            optimizer.zero_grad()
-            output = model(data)
-            loss = criterion(output, target)
-            loss.backward()
-            optimizer.step()
-            acc = accuracy(output, target, topk=(1,))[0]
+            data, target = mixup(data, target)
+            data = random_erasing(data)
+            with torch.cuda.amp.autocast():
+                output = model(data)
+                loss = criterion(output, target)
+            scaler.scale(loss).backward()
+            if (step + 1) % 5 == 0:
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad()
+            acc = accuracy(output, torch.argmax(target, dim=1), topk=(1,))[0]
             avgacc.update(acc, batch_size)
             avgloss.update(loss.item(), batch_size)
             tepoch.update(1)
@@ -84,8 +98,10 @@ def evaluate(
             batch_size = data.size(0)
             data, target = data.to(device), target.to(device)
             output = model(data)
+            # index to one hot
+            target = torch.zeros_like(output).scatter_(1, target.unsqueeze(1), 1)
             loss = criterion(output, target)
-            acc = accuracy(output, target, topk=(1,))[0]
+            acc = accuracy(output, torch.argmax(target, dim=1), topk=(1,))[0]
             avgacc.update(acc, batch_size)
             avgloss.update(loss.item(), batch_size)
             step += 1

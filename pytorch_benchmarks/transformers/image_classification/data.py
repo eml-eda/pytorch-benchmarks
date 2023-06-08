@@ -20,41 +20,36 @@
 import os
 import warnings
 import torch
-from torchvision import datasets, transforms
-from transformers import ViTImageProcessor
 import torchvision.datasets.utils as ds_utils
+from torchvision import datasets, transforms
+from torchvision.transforms.functional import InterpolationMode
 
 def get_data(dataset: str,
              validation_split: float=0.2,
-             preprocessor_name: str = '',
              data_dir:str = None,
+             rand_augment: bool = True,
              download: bool = True):
     # impose default data directory
     if data_dir is None:
         data_dir = os.path.join(os.getcwd(), f'./{dataset}_data')
-
-    # load preprocessing pipeline
-    if preprocessor_name != '':
-        processor = ViTImageProcessor.from_pretrained(preprocessor_name)
-    else:
-        processor = ViTImageProcessor()
     
-    size = processor.size
-    width, height = size['width'], size['height']
-    mean, std = processor.image_mean, processor.image_std
+    # default image size
+    width, height = 224, 224
+    # imagenet mean and std
+    mean = 0.485, 0.456, 0.406
+    std = 0.229, 0.224, 0.225
     
     normalize = transforms.Normalize(mean, std)
 
     train_transform = transforms.Compose([
-        transforms.RandomResizedCrop((height, width)),
-        transforms.RandomHorizontalFlip(),
+        transforms.Resize((height, width), interpolation = InterpolationMode.BICUBIC),
+        transforms.RandAugment(num_ops=2, magnitude=9 if rand_augment else 0),
         transforms.ToTensor(),
         normalize,
     ])
 
     test_transform = transforms.Compose([
-        transforms.Resize((height, width)),
-        transforms.CenterCrop((height, width)),
+        transforms.Resize((height, width), interpolation = InterpolationMode.BICUBIC),
         transforms.ToTensor(),
         normalize,
     ])
