@@ -30,19 +30,16 @@ print("Training on:", device)
 seed = seed_all(seed=42)
 
 # impose dataset information
-dataset_name = 'tiny-imagenet'
+dataset_name = 'tinyimagenet'
 num_classes = 200
 
-# impose pretrained model
-model_name = 'google/vit-base-patch16-224-in21k'
-
 # Get the Data
-datasets = icl.get_data(dataset_name, preprocessor_name=model_name, download=True)
+datasets = icl.get_data(dataset_name, download=True)
 dataloaders = icl.build_dataloaders(datasets, num_workers=os.cpu_count())
 train_dl, val_dl, test_dl = dataloaders
 
 # Get the Model
-model = icl.get_reference_model(model_name, num_classes=num_classes, from_scratch=False, is_encoder_frozen=True)
+model = icl.get_reference_model(num_classes=num_classes, from_scratch=False, is_encoder_frozen=True)
 if torch.cuda.is_available():
     model = model.cuda()
 

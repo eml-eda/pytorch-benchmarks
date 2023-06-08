@@ -8,4 +8,4 @@ Pillow
 pandas
 scikit-learn
 scikit-image
-transformers
+timm
