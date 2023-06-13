@@ -16,6 +16,7 @@
 # *                                                                            *
 # * Author:  Leonardo Tredese <s302294@studenti.polito.it>                     *
 # *----------------------------------------------------------------------------*
+from math import ceil
 import torch
 import torch.nn as nn
 from pytorch_benchmarks.utils import AverageMeter
@@ -31,11 +32,16 @@ def get_default_optimizer(model: nn.Module, lr: float = 1e-3, weight_decay: floa
 def get_default_criterion() -> nn.Module:
     return SoftTargetCrossEntropy()
 
+def get_default_scheduler(optimizer: torch.optim.Optimizer, update_freq:int, trainset_len:int, epochs:int) -> torch.optim.lr_scheduler.CosineAnnealingLR:
+    return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=ceil(trainset_len/update_freq)*epochs)
+
 def train_one_epoch(
         epoch: int,
         model: nn.Module,
         criterion: nn.Module,
         optimizer: torch.optim.Optimizer,
+        update_freq: int,
+        scheduler: torch.optim.lr_scheduler.CosineAnnealingLR,
         train: torch.utils.data.DataLoader,
         val: torch.utils.data.DataLoader,
         device: torch.device) -> dict:
@@ -52,17 +58,18 @@ def train_one_epoch(
         tepoch.set_description(f"Epoch {epoch + 1}")
         for step, (data, target) in enumerate(train):
             batch_size = data.size(0)
-            data, target = data.to(device), target.to(device)
+            data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
             data, target = mixup(data, target)
             data = random_erasing(data)
             with torch.cuda.amp.autocast():
                 output = model(data)
                 loss = criterion(output, target)
             scaler.scale(loss).backward()
-            if (step + 1) % 5 == 0:
+            if (step + 1) % update_freq == 0 or step == len(train) - 1:
                 scaler.step(optimizer)
                 scaler.update()
                 optimizer.zero_grad()
+                scheduler.step()
             acc = accuracy(output, torch.argmax(target, dim=1), topk=(1,))[0]
             avgacc.update(acc, batch_size)
             avgloss.update(loss.item(), batch_size)
@@ -96,8 +103,9 @@ def evaluate(
     with torch.no_grad():
         for data, target in val:
             batch_size = data.size(0)
-            data, target = data.to(device), target.to(device)
-            output = model(data)
+            data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
+            with torch.cuda.amp.autocast():
+                output = model(data)
             # index to one hot
             target = torch.zeros_like(output).scatter_(1, target.unsqueeze(1), 1)
             loss = criterion(output, target)

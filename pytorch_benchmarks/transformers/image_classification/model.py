@@ -20,9 +20,11 @@ import torch
 import torch.nn as nn
 from timm.models import create_model
 
+def get_available_models():
+    return timm.models.list_models(pretrained=True)
 
-def get_reference_model(num_classes: int, is_encoder_frozen: bool, from_scratch: bool):
-    model = create_model('vit_base_patch16_224', pretrained=not from_scratch, drop_path_rate=0.1)
+def get_reference_model(num_classes: int, is_encoder_frozen: bool, from_scratch: bool, model_name: str = 'vit_large_patch16_384') -> nn.Module:
+    model = create_model(model_name, pretrained=not from_scratch, drop_path_rate=0.1)
 
     if is_encoder_frozen:
         for param in model.parameters():
