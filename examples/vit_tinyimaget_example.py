@@ -30,10 +30,12 @@ print("Training on:", device)
 seed = seed_all(seed=42)
 
 # impose dataset information
-dataset_name = 'tinyimagenet'
+dataset_name = 'tiny-imagenet'
 num_classes = 200
 
 # Get the Data
+batch_size = 64
+update_frequency = 128 // batch_size
 datasets = icl.get_data(dataset_name, download=True)
 dataloaders = icl.build_dataloaders(datasets, num_workers=os.cpu_count())
 train_dl, val_dl, test_dl = dataloaders
@@ -49,13 +51,19 @@ if torch.cuda.is_available():
     model = model.cuda()
 
 # Get Training Settings
+N_EPOCHS = 20
 criterion = icl.get_default_criterion()
 optimizer = icl.get_default_optimizer(model)
+scheduler_config = {
+        'epochs': N_EPOCHS,
+        'update_frequency': update_frequency,
+        'trainset_len': len(train_dl.dataset)
+}
+scheduler = icl.get_default_scheduler(optimizer, scheduler_config = scheduler_config)
 
 # Training Loop
-N_EPOCHS = 1
 for epoch in range(N_EPOCHS):
-    _ = icl.train_one_epoch(epoch, model, criterion, optimizer, train_dl, val_dl, device)
+    _ = icl.train_one_epoch(epoch, model, criterion, optimizer, update_frequency, scheduler, train_dl, val_dl, device)
 test_metrics = icl.evaluate(model, criterion, test_dl, device)
 
 print("Test Set Loss:", test_metrics['loss'])

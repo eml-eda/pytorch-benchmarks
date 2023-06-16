@@ -16,6 +16,7 @@
 # *                                                                            *
 # * Author:  Leonardo Tredese <s302294@studenti.polito.it>                     *
 # *----------------------------------------------------------------------------*
+from typing import Optional, Dict, Any
 from math import ceil
 import torch
 import torch.nn as nn
@@ -26,13 +27,17 @@ from timm.loss.cross_entropy import SoftTargetCrossEntropy
 from timm.data.mixup import Mixup
 from timm.data.random_erasing import RandomErasing
 
-def get_default_optimizer(model: nn.Module, lr: float = 1e-3, weight_decay: float = 0.05) -> torch.optim.Optimizer:
-    return torch.optim.AdamW(model.parameters(), lr=lr)
+def get_default_optimizer(model: nn.Module, lr: float = 1e-3, encoder_lr: float = 1e-4, weight_decay: float = 0.05) -> torch.optim.Optimizer:
+    return torch.optim.AdamW([{'params': (p for n, p in model.named_parameters() if 'head' in n), 'lr': lr},
+                              {'params': (p for n, p in model.named_parameters() if 'head' not in n), 'lr': encoder_lr}], weight_decay=0.05)
 
 def get_default_criterion() -> nn.Module:
     return SoftTargetCrossEntropy()
 
-def get_default_scheduler(optimizer: torch.optim.Optimizer, update_freq:int, trainset_len:int, epochs:int) -> torch.optim.lr_scheduler.CosineAnnealingLR:
+def get_default_scheduler(optimizer: torch.optim.Optimizer, scheduler_config: Optional[Dict[str, Any]] = dict()) -> torch.optim.lr_scheduler.CosineAnnealingLR:
+    update_freq = scheduler_config.get('update_frequency', 1)
+    trainset_len = scheduler_config.get('trainset_len', 50000)
+    epochs = scheduler_config.get('epochs', 200)
     return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=ceil(trainset_len/update_freq)*epochs)
 
 def train_one_epoch(
