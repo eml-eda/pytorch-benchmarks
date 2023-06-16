@@ -16,7 +16,7 @@
 # *                                                                            *
 # * Author:  Leonardo Tredese <s302294@studenti.polito.it>                     *
 # *----------------------------------------------------------------------------*
-
+from typing import Literal
 import os
 import warnings
 import torch
@@ -24,7 +24,7 @@ import torchvision.datasets.utils as ds_utils
 from torchvision import datasets, transforms
 from torchvision.transforms.functional import InterpolationMode
 
-def get_data(dataset: str,
+def get_data(dataset: Literal['cifar10', 'tiny-imagenet', 'imagenet'],
              validation_split: float=0.2,
              data_dir:str = None,
              rand_augment: bool = True,
