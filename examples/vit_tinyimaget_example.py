@@ -39,7 +39,12 @@ dataloaders = icl.build_dataloaders(datasets, num_workers=os.cpu_count())
 train_dl, val_dl, test_dl = dataloaders
 
 # Get the Model
-model = icl.get_reference_model(num_classes=num_classes, from_scratch=False, is_encoder_frozen=True)
+model_config = {
+    'num_classes': num_classes,
+    'is_encoder_frozen': False,
+    'from_scratch': False
+}
+model = icl.get_reference_model(model_name='vit_small_patch16_384', model_config=model_config)
 if torch.cuda.is_available():
     model = model.cuda()
 

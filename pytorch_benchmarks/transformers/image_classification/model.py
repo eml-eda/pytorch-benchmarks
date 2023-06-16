@@ -16,6 +16,7 @@
 # *                                                                            *
 # * Author:  Leonardo Tredese <s302294@studenti.polito.it>                     *
 # *----------------------------------------------------------------------------*
+from typing import Optional, Dict, Any
 import torch
 import torch.nn as nn
 from timm.models import create_model
@@ -23,7 +24,10 @@ from timm.models import create_model
 def get_available_models():
     return timm.models.list_models(pretrained=True)
 
-def get_reference_model(num_classes: int, is_encoder_frozen: bool, from_scratch: bool, model_name: str = 'vit_large_patch16_384') -> nn.Module:
+def get_reference_model(model_name: Optional[str] = 'vit_large_patch16_384', model_config: Optional[Dict[str, Any]] = dict()) -> nn.Module:
+    num_classes = model_config.get('num_classes', 1000)
+    is_encoder_frozen = model_config.get('is_encoder_frozen', False)
+    from_scratch = model_config.get('from_scratch', False)
     model = create_model(model_name, pretrained=not from_scratch, drop_path_rate=0.1)
 
     if is_encoder_frozen:
