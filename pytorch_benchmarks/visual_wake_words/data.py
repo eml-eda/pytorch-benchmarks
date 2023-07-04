@@ -25,38 +25,72 @@ import torchvision.transforms as transforms
 import requests
 import tarfile
 from PIL import Image
-from torch.utils.data import Dataset, DataLoader, ConcatDataset, random_split
+from torch.utils.data import Dataset, DataLoader, random_split
+
+
+class Augment(Dataset):
+    def __init__(self, base_data, augment=True):
+        super().__init__()
+        self.base_data = base_data
+
+        # Defining the same data augmentation steps of the TinyML paper for training
+        if augment:
+            self.augmentation = transforms.Compose([
+                transforms.RandomRotation(10),
+                transforms.RandomAffine(degrees=0, translate=(0.05, 0.05)),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomResizedCrop(size=96, scale=(0.9, 1.1)),
+                transforms.ToTensor()
+            ])
+        else:  # Used for test, simply convert to tensor
+            self.augmentation = transforms.Compose([
+                transforms.ToTensor()
+            ])
+
+    def __getitem__(self, index):
+        img, label = self.base_data[index]
+        img = self.augmentation(img)
+        return img, label
+
+    def __len__(self):
+        return len(self.base_data)
 
 
 class Coco(Dataset):
-    def __init__(self, image_path):
+    def __init__(self, image_path_train, image_path_val):
         super().__init__()
+        # self.augment = augment
 
         # images with person and train in the filename
-        self.person_list = glob.glob(image_path[0])
-        self.person_label = list(torch.ones(len(self.person_list), dtype=torch.long))
+        self.person_list_train = glob.glob(image_path_train[0])
+        self.person_label_train = list(torch.ones(len(self.person_list_train),
+                                                  dtype=torch.long))
+
+        # images with person and val in the filename
+        self.person_list_val = glob.glob(image_path_val[0])
+        self.person_label_val = list(torch.ones(len(self.person_list_val),
+                                                dtype=torch.long))
 
         # images with no person and train in the file name
-        self.non_person_list = glob.glob(image_path[1])
-        self.non_person_label = list(torch.zeros(len(self.non_person_list), dtype=torch.long))
+        self.non_person_list_train = glob.glob(image_path_train[1])
+        self.non_person_label_train = list(torch.zeros(len(self.non_person_list_train),
+                                                       dtype=torch.long))
 
-        self.set = self.person_list + self.non_person_list
-        self.label = self.person_label + self.non_person_label
+        # images with no person and val in the file name
+        self.non_person_list_val = glob.glob(image_path_val[1])
+        self.non_person_label_val = list(torch.zeros(len(self.non_person_list_val),
+                                                     dtype=torch.long))
 
-        # Defining the same data augmentation steps of the TinyML paper for training
-        self.augmentation = transforms.Compose([
-            transforms.RandomRotation(10),
-            transforms.RandomAffine(degrees=0, translate=(0.05, 0.05)),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomResizedCrop(size=96, scale=(0.9, 1.1)),
-            transforms.ToTensor()
-        ])
+        self.set = (self.person_list_train + self.non_person_list_train +
+                    self.person_list_val + self.non_person_list_val)
+        self.label = (self.person_label_train + self.non_person_label_train +
+                      self.person_label_val + self.non_person_label_val)
 
     def __getitem__(self, index):
         # TODO: is it possible to pre-open all the images?
         img = Image.open(self.set[index])
         flag = self.label[index]
-        img = self.augmentation(img)
+        # img = transforms.ToTensor()(img)
         return img, flag
 
     def __len__(self):
@@ -67,7 +101,8 @@ def get_data(data_dir=None,
              url='https://www.silabs.com/public/files/github/machine_learning/benchmarks/datasets/',
              ds_name='vw_coco2014_96.tar.gz',
              val_split=0.2,
-             test_split=0.1
+             test_split=0.1,
+             seed=None
              ) -> Tuple[Dataset, ...]:
     if data_dir is None:
         data_dir = os.path.join(os.getcwd(), 'vww_data')
@@ -87,23 +122,34 @@ def get_data(data_dir=None,
         file.extractall(data_dir)
         file.close()
 
-    ds_train_orig = Coco([data_dir + ds_person_name + '*train*',
-                          data_dir + ds_non_person_name + '*train*'])
-    ds_val_orig = Coco([data_dir + ds_person_name + '*val*',
-                        data_dir + ds_non_person_name + '*val*'])
-
-    # TinyML doesnt' use the original validation split but it merges all data
+    # Merge together train and val samples in a single dataset
+    # MLPerf Tiny doesn't use the original validation split but it merges all data
     # and then it takes random 10% as test set.
-    ds_train_val = ConcatDataset([ds_train_orig, ds_val_orig])
+    ds_train_val = Coco([data_dir + ds_person_name + '*train*',
+                         data_dir + ds_non_person_name + '*train*'],
+                        [data_dir + ds_person_name + '*val*',
+                         data_dir + ds_non_person_name + '*val*'])
+
+    # Maybe fix seed of RNG
+    if seed is not None:
+        generator = torch.Generator().manual_seed(seed)
+    else:
+        generator = None
 
     train_val_len = len(ds_train_val) - int(test_split * len(ds_train_val))
     test_len = int(len(ds_train_val) * test_split)
-    ds_train_val, ds_test = random_split(ds_train_val, [train_val_len, test_len])
+    ds_train_val, ds_test = random_split(ds_train_val, [train_val_len, test_len],
+                                         generator=generator)
+
+    # Add augmentation for train-val split
+    ds_train_val = Augment(ds_train_val)
+    ds_test = Augment(ds_test, augment=False)
 
     # We take another 20% as validation split
     train_len = len(ds_train_val) - int(val_split * len(ds_train_val))
     val_len = int(val_split * len(ds_train_val))
-    ds_train, ds_val = random_split(ds_train_val, [train_len, val_len])
+    ds_train, ds_val = random_split(ds_train_val, [train_len, val_len],
+                                    generator=generator)
 
     return ds_train, ds_val, ds_test
 

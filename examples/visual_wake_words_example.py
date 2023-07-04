@@ -30,7 +30,14 @@ print("Training on:", device)
 seed = seed_all(seed=42)
 
 # Get the Data
-datasets = vww.get_data()
+datasets = vww.get_data(seed=seed)
+# tmp #
+test_data = datasets[2]
+test_label = [test_data[i][1].item() for i in range(len(test_data))]
+import pickle
+with open('label_billie.pkl', 'wb') as f:
+    pickle.dump(test_label, f)
+# tmp #
 dataloaders = vww.build_dataloaders(datasets)
 train_dl, val_dl, test_dl = dataloaders
 
@@ -49,7 +56,7 @@ optimizer = vww.get_default_optimizer(model)
 scheduler = vww.get_default_scheduler(optimizer)
 
 # Training Loop
-N_EPOCHS = 50
+N_EPOCHS = 1
 for epoch in range(N_EPOCHS):
     _ = vww.train_one_epoch(epoch, model, criterion, optimizer, train_dl, val_dl, device)
     scheduler.step()
