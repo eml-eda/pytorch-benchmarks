@@ -1,5 +1,5 @@
 # Pytorch Benchmarks
-`pytorch-benchmarks` is the §benchmark library of the **eml** branch of the **EDA** group within Politecnico di Torino.
+`pytorch-benchmarks` is the benchmark library of the **eml** branch of the **EDA** group within Politecnico di Torino.
 
 The library is entirely written in pytorch and addresses the training of DNNs models on edge-relevant use-cases.
 
@@ -10,6 +10,9 @@ In its latest release, the library currently includes the following benchmarks:
 4. [Anomaly Detection](./pytorch_benchmarks/anomaly_detection/) on the ToyADMOS dataset.
 5. [Heart Rate Detection](./pytorch_benchmarks/hr_detection/) on the PPG-DALIA dataset.
 6. [TinyImageNet](./pytorch_benchmarks/tiny_imagenet/) on the omonimous dataset.
+7. [Gesture Recognition](./pytorch_benchmarks/gesture_recognition/) on the NinaProDB6 dataset.
+8. [Image Classification - ViT](./pytorch_benchmarks/transformers/image_classification/) for Vision Transformers on the CIFAR10 and Tiny-ImageNet datasets.
+9. [InfraRed Person Counting](./pytorch_benchmarks/LINAIGE_Kaggle/) on the LINAIGE dataset.
 
 N.B., tasks from 1. to 4. represent our *in-house* implementation of the [MLPerf Tiny](https://github.com/mlcommons/tiny) benchmark suite (originally implemented in the `tf-keras` framework).
 
@@ -69,6 +72,8 @@ Finally, for each benchmark an end-to-end example script is provided in the `exa
 4. [Anomaly Detection Example](examples/anomaly_detection_example.py)
 5. [Heart Rate Detection Example](examples/hr_detection_example.py)
 6. [Tiny ImageNet Example](examples/tiny_imagenet_example.py)
+7. [Gesture Recognition Example](examples/gesture_recognition_example.py)
+8. [Image Classification ViT CIFAR10 Example](examples/vit_cifar10_example.py) and [Image Classification ViT Tiny-ImageNet Example](examples/vit_tinyimaget_example.py)
 
 Each example shows how to use the different functions in order to build a neat and simple DNN training.
 
