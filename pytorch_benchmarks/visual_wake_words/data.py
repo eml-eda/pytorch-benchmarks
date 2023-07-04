@@ -17,9 +17,11 @@
 # * Author:  Matteo Risso <matteo.risso@polito.it>                             *
 # *----------------------------------------------------------------------------*
 
+import random
 from typing import Tuple
 import os
 import glob
+import numpy
 import torch
 import torchvision.transforms as transforms
 import requests
@@ -167,11 +169,20 @@ def build_dataloaders(datasets: Tuple[Dataset, ...],
     else:
         generator = None
 
+    # Maybe define worker init fn
+    if seed is not None:
+        def worker_init_fn(worker_id):
+            numpy.random.seed(seed)
+            random.seed(seed)
+    else:
+        worker_init_fn = None
+
     train_loader = DataLoader(
         train_set,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
+        worker_init_fn=worker_init_fn,
         generator=generator,
     )
     val_loader = DataLoader(
@@ -179,6 +190,7 @@ def build_dataloaders(datasets: Tuple[Dataset, ...],
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
+        worker_init_fn=worker_init_fn,
         generator=generator,
     )
     test_loader = DataLoader(
@@ -186,6 +198,7 @@ def build_dataloaders(datasets: Tuple[Dataset, ...],
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
+        worker_init_fn=worker_init_fn,
         generator=generator,
     )
     return train_loader, val_loader, test_loader
