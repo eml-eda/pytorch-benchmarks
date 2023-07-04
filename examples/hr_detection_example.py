@@ -50,7 +50,7 @@ data_gen = hrd.get_data()
 for datasets in data_gen:
     train_ds, val_ds, test_ds = datasets
     test_subj = test_ds.test_subj
-    dataloaders = hrd.build_dataloaders(datasets)
+    dataloaders = hrd.build_dataloaders(datasets, seed=seed)
     train_dl, val_dl, test_dl = dataloaders
     # Set earlystop
     earlystop = EarlyStopping(patience=20, mode='min')

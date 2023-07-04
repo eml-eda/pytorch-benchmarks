@@ -30,8 +30,8 @@ print("Training on:", device)
 seed = seed_all(seed=42)
 
 # Get the Data
-datasets = icl.get_data()
-dataloaders = icl.build_dataloaders(datasets)
+datasets = icl.get_data(seed=seed)
+dataloaders = icl.build_dataloaders(datasets, seed=seed)
 train_dl, val_dl, test_dl = dataloaders
 
 # Get the Model

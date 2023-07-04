@@ -49,7 +49,7 @@ optimizer = vww.get_default_optimizer(model)
 scheduler = vww.get_default_scheduler(optimizer)
 
 # Training Loop
-N_EPOCHS = 1
+N_EPOCHS = 50
 for epoch in range(N_EPOCHS):
     _ = vww.train_one_epoch(epoch, model, criterion, optimizer, train_dl, val_dl, device)
     scheduler.step()

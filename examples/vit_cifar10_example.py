@@ -37,7 +37,10 @@ num_classes = 10
 batch_size = 64
 update_frequency = 128 // batch_size
 datasets = icl.get_data(dataset_name, download=True)
-dataloaders = icl.build_dataloaders(datasets, batch_size=batch_size, num_workers=os.cpu_count())
+dataloaders = icl.build_dataloaders(datasets,
+                                    batch_size=batch_size,
+                                    num_workers=os.cpu_count(),
+                                    seed=seed)
 train_dl, val_dl, test_dl = dataloaders
 
 # Get the Model
@@ -59,11 +62,12 @@ scheduler_config = {
         'update_frequency': update_frequency,
         'trainset_len': len(train_dl.dataset)
 }
-scheduler = icl.get_default_scheduler(optimizer, scheduler_config = scheduler_config)
+scheduler = icl.get_default_scheduler(optimizer, scheduler_config=scheduler_config)
 
 # Training Loop
 for epoch in range(N_EPOCHS):
-    _ = icl.train_one_epoch(epoch, model, criterion, optimizer, update_frequency, scheduler, train_dl, val_dl, device)
+    _ = icl.train_one_epoch(epoch, model, criterion, optimizer,
+                            update_frequency, scheduler, train_dl, val_dl, device)
 test_metrics = icl.evaluate(model, criterion, test_dl, device)
 
 print("Test Set Loss:", test_metrics['loss'])

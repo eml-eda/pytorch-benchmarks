@@ -18,9 +18,12 @@
 # *----------------------------------------------------------------------------*
 
 # Code insipired by: https://tinyurl.com/tiny-imagenet
+import random
 from pathlib import Path
 import shutil
 from typing import Tuple
+import numpy
+import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
@@ -33,6 +36,7 @@ URL_DATA = 'http://cs231n.stanford.edu/tiny-imagenet-200.zip'
 def get_data(data_dir=None,
              val_split=0.1,
              inp_res=64,
+             seed=None,
              ) -> Tuple[Dataset, ...]:
     if data_dir is None:
         data_dir = Path.cwd() / 'data'
@@ -64,11 +68,18 @@ def get_data(data_dir=None,
         raise ValueError('Use either 64 or 224 as inp_res.')
     ds_train_val = ImageFolder(train_data_dir, transform=transform_train)
 
+    # Maybe fix seed of RNG
+    if seed is not None:
+        generator = torch.Generator().manual_seed(seed)
+    else:
+        generator = None
+
     # Split train_val data in training and validation
     if val_split != 0.0:
         val_len = int(val_split * len(ds_train_val))
         train_len = len(ds_train_val) - val_len
-        ds_train, ds_val = random_split(ds_train_val, [train_len, val_len])
+        ds_train, ds_val = random_split(ds_train_val, [train_len, val_len],
+                                        generator=generator)
     else:
         ds_train, ds_val = ds_train_val, None
 
@@ -112,15 +123,33 @@ def get_data(data_dir=None,
 
 def build_dataloaders(datasets: Tuple[Dataset, ...],
                       batch_size=100,
-                      num_workers=4
+                      num_workers=4,
+                      seed=None,
                       ) -> Tuple[DataLoader, DataLoader, DataLoader]:
     train_set, val_set, test_set = datasets
+
+    # Maybe fix seed of RNG
+    if seed is not None:
+        generator = torch.Generator().manual_seed(seed)
+    else:
+        generator = None
+
+    # Maybe define worker init fn
+    if seed is not None:
+        def worker_init_fn(worker_id):
+            numpy.random.seed(seed)
+            random.seed(seed)
+    else:
+        worker_init_fn = None
+
     train_loader = DataLoader(
         train_set,
         batch_size=batch_size,
         shuffle=True,
         pin_memory=True,
         num_workers=num_workers,
+        worker_init_fn=worker_init_fn,
+        generator=generator,
     )
     if val_set is not None:
         val_loader = DataLoader(
@@ -129,6 +158,8 @@ def build_dataloaders(datasets: Tuple[Dataset, ...],
             shuffle=True,
             pin_memory=True,
             num_workers=num_workers,
+            worker_init_fn=worker_init_fn,
+            generator=generator,
         )
     else:
         val_loader = None
@@ -138,6 +169,8 @@ def build_dataloaders(datasets: Tuple[Dataset, ...],
         shuffle=False,
         pin_memory=True,
         num_workers=num_workers,
+        worker_init_fn=worker_init_fn,
+        generator=generator,
     )
 
     return train_loader, val_loader, test_loader

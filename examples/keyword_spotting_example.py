@@ -33,7 +33,7 @@ seed = seed_all(seed=42)
 # use commented line for TCResNet14
 # datasets = kws.get_data(one_dim=True)
 datasets = kws.get_data()
-dataloaders = kws.build_dataloaders(datasets)
+dataloaders = kws.build_dataloaders(datasets, seed=seed)
 train_dl, val_dl, test_dl = dataloaders
 
 # Get the Model

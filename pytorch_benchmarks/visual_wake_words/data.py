@@ -29,6 +29,8 @@ import tarfile
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader, random_split
 
+DATA_URL = 'https://www.silabs.com/public/files/github/machine_learning/benchmarks/datasets/'
+
 
 class Augment(Dataset):
     def __init__(self, base_data, augment=True):
@@ -100,7 +102,7 @@ class Coco(Dataset):
 
 
 def get_data(data_dir=None,
-             url='https://www.silabs.com/public/files/github/machine_learning/benchmarks/datasets/',
+             url=DATA_URL,
              ds_name='vw_coco2014_96.tar.gz',
              val_split=0.2,
              test_split=0.1,

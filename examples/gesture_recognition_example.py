@@ -48,8 +48,8 @@ optimizer = gr.get_default_optimizer(model)
 Acc_dict = dict()
 subjects = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 for sub in subjects:
-    data_gen = gr.get_data(subjects = [sub])
-    train_loader, val_loader, test_loader = gr.build_dataloaders(data_gen)
+    data_gen = gr.get_data(subjects=[sub])
+    train_loader, val_loader, test_loader = gr.build_dataloaders(data_gen, seed=seed)
     # Set earlystop
     earlystop = EarlyStopping(patience=20, mode='min')
     # Training Loop
