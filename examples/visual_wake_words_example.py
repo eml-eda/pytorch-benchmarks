@@ -31,14 +31,7 @@ seed = seed_all(seed=42)
 
 # Get the Data
 datasets = vww.get_data(seed=seed)
-# tmp #
-test_data = datasets[2]
-test_label = [test_data[i][1].item() for i in range(len(test_data))]
-import pickle
-with open('label_billie.pkl', 'wb') as f:
-    pickle.dump(test_label, f)
-# tmp #
-dataloaders = vww.build_dataloaders(datasets)
+dataloaders = vww.build_dataloaders(datasets, seed=seed)
 train_dl, val_dl, test_dl = dataloaders
 
 # Get the Model
