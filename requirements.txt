@@ -4,6 +4,7 @@ pytorch_model_summary
 tqdm
 torchaudio
 librosa
+opendatasets
 Pillow
 pandas
 scikit-learn

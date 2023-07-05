@@ -1,32 +1,58 @@
-import numpy as np
-import pandas as pd
-from typing import Tuple
+# *----------------------------------------------------------------------------*
+# * Copyright (C) 2023 Politecnico di Torino, Italy                            *
+# * SPDX-License-Identifier: Apache-2.0                                        *
+# *                                                                            *
+# * Licensed under the Apache License, Version 2.0 (the "License");            *
+# * you may not use this file except in compliance with the License.           *
+# * You may obtain a copy of the License at                                    *
+# *                                                                            *
+# * http://www.apache.org/licenses/LICENSE-2.0                                 *
+# *                                                                            *
+# * Unless required by applicable law or agreed to in writing, software        *
+# * distributed under the License is distributed on an "AS IS" BASIS,          *
+# * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.   *
+# * See the License for the specific language governing permissions and        *
+# * limitations under the License.                                             *
+# *                                                                            *
+# * Author:  Matteo Risso <matteo.risso@polito.it>                             *
+# *----------------------------------------------------------------------------*
+
+import os
 from pathlib import Path
 import pickle
-import os
-import opendatasets as od 
+from typing import Tuple, Optional, Literal, Generator
+
+import numpy as np
+import opendatasets as od
+import pandas as pd
 from sklearn.utils import class_weight
-import tensorflow as tf
 from sklearn.model_selection import train_test_split
 import torch
-from torch.utils.data import Dataset, DataLoader, TensorDataset
+from torch.utils.data import Dataset, DataLoader
 
+# TODO: move this in the README.md
 '''
 Read carefully the steps of the link below to download the datasets.
 https://github.com/JovianHQ/opendatasets/blob/master/README.md#kaggle-credentials
 Briefly, follow these steps to find your API credentials:
 
-1.Go to https://kaggle.com/me/account (sign in if required).
+1. Go to https://kaggle.com/me/account (sign in if required).
 
-2.Scroll down to the "API" section and click "Create New API Token". This will download a file kaggle.json with the following contents:
+2. Scroll down to the "API" section and click "Create New API Token".
+   This will download a file kaggle.json with the following contents:
+   {"username":"YOUR_KAGGLE_USERNAME","key":"YOUR_KAGGLE_KEY"}
 
-3.{"username":"YOUR_KAGGLE_USERNAME","key":"YOUR_KAGGLE_KEY"}, When you run opendatsets.download, you will be asked to enter your username & Kaggle API, which you can get from the file downloaded in step 2.
+3. When you run opendatsets.download,
+   you will be asked to enter your username & Kaggle API,
+   which you can get from the file downloaded in step 2.
 
-Note that you need to download the kaggle.json file only once. You can also place the kaggle.json file in the same directory as the Jupyter notebook, and the credentials will be read automatically.
-
+Note that you need to download the kaggle.json file only once.
+You can also place the kaggle.json file in the same directory as the Jupyter notebook,
+and the credentials will be read automatically.
 '''
 
-LINAIGE_URL = 'https://www.kaggle.com/datasets/francescodaghero/linaige/download?datasetVersionNumber=3'
+LINAIGE_URL = ('https://www.kaggle.com/datasets/francescodaghero/'
+               'linaige/download?datasetVersionNumber=3')
 
 
 def get_class_weight(y):
@@ -35,19 +61,7 @@ def get_class_weight(y):
     class_weights = torch.tensor(class_weights,dtype=torch.float)
     return class_weights
 
-def read_files(directory_LINAIGE):
-    data=list()
-    for dirname, _, filenames in os.walk(directory_LINAIGE):
-        for filename in sorted(filenames):
-            full_path = os.path.join(dirname, filename)
-            session_name = filename.split("_")[0]
-            session_id = int(session_name.replace("Session",""))
-            # Read the file
-            file_data = pd.read_csv(full_path)
-            file_data["session"] = session_id
-            data.append(file_data)
-    data = pd.concat(data)
-    return data
+
 
 class Linaige_set(Dataset):
     def __init__(self, samples, targets):
@@ -470,31 +484,37 @@ def dataset_cross_validation(data:pd.DataFrame, windowing:int, confindence:str, 
             
             yield x_train, y_train, x_test, y_test, [], [], class_weights
             remove_seesion -= 1
-        
-            
-   
-def get_data(win_size:int, confindence:str, remove_frame:bool, classification:bool, data_dir:str=None, session_number:int=None, test_split:float=None, majority_win:int=None) -> Tuple[Dataset, ...]:
+
+
+def get_data(data_dir: Optional[str] = None,
+             win_size: int = 1,
+             confindence: Literal['easy', 'all'] = 'all',
+             remove_frame: bool = True,
+             classification: bool = True,
+             session_number: Optional[int] = None,
+             test_split: Optional[float] = None,
+             majority_win: Optional[int] = None,
+             ) -> Tuple[Dataset, ...]:
+    """The function that download, preprocess and build dataset.
     
-    # Creating name for directory 
+    """
+    # Maybe download data
     if data_dir is None:
-        data_dir = Path('.').absolute() / 'LINAIGE_Folder'
-    
-    # Creating the directory with created name before
+        data_dir = Path('.').absolute() / 'linaige_data'
     if not data_dir.exists():
         print('Downloading...')
         data_dir.mkdir()
         od.download(LINAIGE_URL, data_dir)
-        
-    data = read_files(data_dir)
-    '''
+
     # Identifying how many distinct numbers exist for people_number column as different class
-    # Optional to pass it to the model for classification task
-    '''
+    # This number is required if the problem is framed as "classification"
+    data = _read_files(data_dir)  # TODO: Check
     if classification:
-      class_number = len(set(data.loc[:, 'people_number'])) 
+        class_number = len(set(data.loc[:, 'people_number']))
     else:
-      class_number = len(set(data.loc[:, 'people_number']>1))
-    
+        class_number = len(set(data.loc[:, 'people_number'] > 1))
+
+    # TODO: move this doc to func 'get_session'
     '''
     # data: 'DataFrame' of whole dataset
     # windowing: the size of window which can be from 1 (no windowing) to any meaningful integer number
@@ -502,63 +522,71 @@ def get_data(win_size:int, confindence:str, remove_frame:bool, classification:bo
     # remove_frame: can be 'True' or 'False' to remove first 8 frames of test set for making comparison fair
     # classification: can be 'True' or 'False' to have classification or regression (binary classification)
     '''
-    # Creating dataset of session 1 (or any) to be used for warm_up and NAS search to avoid data leakage
-    if session_number != None:
-        x_train, y_train, x_test, y_test, class_weights = get_session(data, win_size, confindence, remove_frame, classification, session_number, test_split)     
-        
+    # Return a specific session denoted by `session_number`
+    if session_number is not None:
+        data_and_labels = get_session(data, win_size, confindence, remove_frame,
+                                      classification, session_number, test_split)
+        x_train, y_train, x_test, y_test, class_weights = data_and_labels
+
         train_set = Linaige_set(x_train, y_train)
-        # Feeding the dataloader
+        # TODO: Remove this dataloader
         train_loader = DataLoader(
             train_set,
             batch_size=128,
             shuffle=True,
             num_workers=2,
         )
-        
-        if x_test !=0:
+
+        if x_test != 0:
             test_set = Linaige_set(x_test, y_test)
+            # TODO: Remove this dataloader
             test_loader = DataLoader(
                 test_set,
                 batch_size=128,
                 shuffle=False,
                 num_workers=2,
             )
-            
+            # TODO: modify this return function to return always the same thing
+            # see what is returned by cv below
             return train_loader, test_loader, x_train, class_weights, class_number
         else:
-            return train_loader, 0, x_train, class_weights, class_number       
-       
-    # Creating datasets by cross validation to be used for fune_tuning process after NAS
+            # TODO: modify this return function to return always the same thing
+            # see what is returned by cv below
+            return train_loader, 0, x_train, class_weights, class_number
     else:
-        dataset_cv = dataset_cross_validation(data, win_size, confindence, remove_frame, classification, majority_win)
+        dataset_cv = dataset_cross_validation(data, win_size, confindence,
+                                              remove_frame, classification, majority_win)
         return dataset_cv, class_number
 
 
-def build_dataloaders(datasets: Tuple[Dataset, ...], batch_size=128, num_workers=2) -> Tuple[DataLoader, DataLoader]:
-    
+def build_dataloaders(datasets: Tuple[Dataset, ...],
+                      batch_size: int = 128,
+                      num_workers: int = 2) -> Tuple[DataLoader, DataLoader]:
     # Extracting datasets from get_data function
+    # TODO: modify, this is a mess
     x_train, y_train, x_test, y_test, x_test_majority, y_test_majority, class_weights = datasets
-    
-
     train_set = Linaige_set(x_train, y_train)
     test_set = Linaige_set(x_test, y_test)
     majority_set = Linaige_set(x_test_majority, y_test_majority)
-    
-    # Feeding the dataloader
+
+    # TODO: Add code for reproducibility
+
+    # Build dataloaders
     train_loader = DataLoader(
         train_set,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
     )
-    
+
     test_loader = DataLoader(
         test_set,
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
     )
-    
+
+    # TODO: wtf is this...
     if len(x_test_majority) == 0:
         majority_loader = 0
     else:
@@ -567,6 +595,22 @@ def build_dataloaders(datasets: Tuple[Dataset, ...], batch_size=128, num_workers
             batch_size=len(x_test_majority),
             shuffle=False,
             num_workers=num_workers,
-        )        
-    
+        )
+
     return train_loader, test_loader, majority_loader
+
+
+def _read_files(data_dir):
+    data = list()
+    for dirname, _, filenames in os.walk(data_dir):
+        for filename in sorted(filenames):
+            # TODO: substitute with pathlib
+            full_path = os.path.join(dirname, filename)
+            session_name = filename.split("_")[0]
+            session_id = int(session_name.replace("Session", ""))
+            # Read the file
+            file_data = pd.read_csv(full_path)
+            file_data["session"] = session_id
+            data.append(file_data)
+    data = pd.concat(data)
+    return data
