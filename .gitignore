@@ -5,3 +5,4 @@ hrd_data/*
 db6_data/*
 *.pyc
 data/*
+*.csv
