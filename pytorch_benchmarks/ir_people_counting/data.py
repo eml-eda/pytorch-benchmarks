@@ -19,7 +19,7 @@
 
 import copy
 from pathlib import Path
-import pickle
+# import pickle
 import random
 from typing import Tuple, Optional, Literal, Generator, Union
 
@@ -346,11 +346,11 @@ def _cross_validation(data: pd.DataFrame,
             # x_train = x_train[train_indices]
             # y_train = y_train[train_indices]
 
-            pickle_dict = {'removed_session': remove_session,
-                           'x_train': x_train, 'y_train': y_train,
-                           'x_test': x_test, 'y_test': y_test}
-            with open('./pickle_file_single', 'wb') as f:
-                pickle.dump(pickle_dict, f, pickle.HIGHEST_PROTOCOL)
+            # pickle_dict = {'removed_session': remove_session,
+            #                'x_train': x_train, 'y_train': y_train,
+            #                'x_test': x_test, 'y_test': y_test}
+            # with open('./pickle_file_single', 'wb') as f:
+            #     pickle.dump(pickle_dict, f, pickle.HIGHEST_PROTOCOL)
 
             # Build dataset
             train_set = Linaige(x_train, y_train)
@@ -471,11 +471,11 @@ def _cross_validation(data: pd.DataFrame,
             # y_train = y_train_w[train_indices]
             y_train = y_train_w
 
-            pickle_dict = {'removed_session': remove_session,
-                           'x_train': x_train, 'y_train': y_train,
-                           'x_test': x_test, 'y_test': y_test}
-            with open('./pickle_file_window', 'wb') as f:
-                pickle.dump(pickle_dict, f, pickle.HIGHEST_PROTOCOL)
+            # pickle_dict = {'removed_session': remove_session,
+            #                'x_train': x_train, 'y_train': y_train,
+            #                'x_test': x_test, 'y_test': y_test}
+            # with open('./pickle_file_window', 'wb') as f:
+            #     pickle.dump(pickle_dict, f, pickle.HIGHEST_PROTOCOL)
 
             # Build dataset
             train_set = Linaige(x_train, y_train)
