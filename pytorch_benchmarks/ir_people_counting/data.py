@@ -20,6 +20,7 @@
 import copy
 from pathlib import Path
 import pickle
+import random
 from typing import Tuple, Optional, Literal, Generator, Union
 
 import numpy as np
@@ -58,7 +59,7 @@ LINAIGE_URL = ('https://www.kaggle.com/datasets/francescodaghero/'
 class Linaige(Dataset):
     def __init__(self, samples, targets):
         super(Linaige).__init__()
-        self.samples = samples
+        self.samples = torch.tensor(samples, dtype=torch.float32)
         self.targets = targets
 
     def __getitem__(self, idx):
@@ -145,15 +146,25 @@ def get_data(data_dir: Optional[str] = None,
 
 def build_dataloaders(datasets: Tuple[Dataset, ...],
                       batch_size: int = 128,
-                      num_workers: int = 2) -> Tuple[DataLoader, DataLoader]:
+                      num_workers: int = 2,
+                      seed: Optional[int] = None,
+                      ) -> Tuple[DataLoader, DataLoader]:
     # Extracting datasets from get_data function
-    # TODO: modify, this is a mess
-    x_train, y_train, x_test, y_test, x_test_majority, y_test_majority, class_weights = datasets
-    train_set = Linaige(x_train, y_train)
-    test_set = Linaige(x_test, y_test)
-    majority_set = Linaige(x_test_majority, y_test_majority)
+    train_set, test_set, _, _ = datasets
 
-    # TODO: Add code for reproducibility
+    # Maybe fix seed of RNG
+    if seed is not None:
+        generator = torch.Generator().manual_seed(seed)
+    else:
+        generator = None
+
+    # Maybe define worker init fn
+    if seed is not None:
+        def worker_init_fn(worker_id):
+            np.random.seed(seed)
+            random.seed(seed)
+    else:
+        worker_init_fn = None
 
     # Build dataloaders
     train_loader = DataLoader(
@@ -161,6 +172,8 @@ def build_dataloaders(datasets: Tuple[Dataset, ...],
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
+        worker_init_fn=worker_init_fn,
+        generator=generator,
     )
 
     test_loader = DataLoader(
@@ -168,9 +181,12 @@ def build_dataloaders(datasets: Tuple[Dataset, ...],
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
+        worker_init_fn=worker_init_fn,
+        generator=generator,
     )
 
     # TODO: wtf is this...
+    '''
     if len(x_test_majority) == 0:
         majority_loader = 0
     else:
@@ -180,8 +196,9 @@ def build_dataloaders(datasets: Tuple[Dataset, ...],
             shuffle=False,
             num_workers=num_workers,
         )
+    '''
 
-    return train_loader, test_loader, majority_loader
+    return train_loader, test_loader
 
 
 def _create_majority(samples, label, confidence,
@@ -335,7 +352,12 @@ def _cross_validation(data: pd.DataFrame,
             with open('./pickle_file_single', 'wb') as f:
                 pickle.dump(pickle_dict, f, pickle.HIGHEST_PROTOCOL)
 
-            yield x_train, y_train, x_test, y_test, x_test_majority, y_test_majority, class_weights
+            # Build dataset
+            train_set = Linaige(x_train, y_train)
+            test_set = Linaige(x_test, y_test)
+            majority_test_set = Linaige(x_test_majority, y_test_majority)
+
+            yield train_set, test_set, majority_test_set, class_weights
             remove_session -= 1
     else:  # windowing implementation
         # Determining the last session to be the test set
@@ -455,7 +477,11 @@ def _cross_validation(data: pd.DataFrame,
             with open('./pickle_file_window', 'wb') as f:
                 pickle.dump(pickle_dict, f, pickle.HIGHEST_PROTOCOL)
 
-            yield x_train, y_train, x_test, y_test, [], [], class_weights
+            # Build dataset
+            train_set = Linaige(x_train, y_train)
+            test_set = Linaige(x_test, y_test)
+
+            yield train_set, test_set, None, class_weights
             remove_session -= 1
 
 

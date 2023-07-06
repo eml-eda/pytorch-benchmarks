@@ -31,10 +31,10 @@ def get_reference_model(model_name: str, model_config: Optional[Dict[str, Any]] 
     win_size = model_config.get('win_size', 1)
     class_num = model_config.get('class_num', 4)
     out_ch_1 = model_config.get('out_ch_1', 64)
-    out_ch_2 = model_config.get('out_ch_2', None)
+    out_ch_2 = model_config.get('out_ch_2', 64)
     use_pool = model_config.get('use_pool', False)
-    use_2nd_conv = model_config.get('use_2nd_conv', False)
-    use_2nd_lin = model_config.get('use_2nd_lin', False)
+    use_2nd_conv = model_config.get('use_2nd_conv', True)
+    use_2nd_lin = model_config.get('use_2nd_lin', True)
 
     model_zoo = ['simple_cnn', 'cnn_tcn']
 
@@ -79,7 +79,7 @@ class SimpleCNN(nn.Module):
             self.conv2 = nn.Conv2d(in_channels=out_ch_1, out_channels=out_ch_2,
                                    kernel_size=3, bias=False)
             self.bn2 = nn.BatchNorm2d(num_features=out_ch_2)
-            self.spat_dim = self.final_spat_dim - 3 + 1
+            self.spat_dim = self.spat_dim - 3 + 1
             self.ch_dim = out_ch_2
         # Optional 2nd linear layer
         if use_2nd_lin:

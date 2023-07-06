@@ -58,7 +58,7 @@ class CheckPoint():
     """
     def __init__(self, dir, net, optimizer, mode='min', fmt='ck_{epoch:03d}.pt'):
         if mode not in ['min', 'max']:
-            raise ValueError("Early-stopping mode not supported") 
+            raise ValueError("Early-stopping mode not supported")
         self.dir = pathlib.Path(dir)
         self.dir.mkdir(parents=True, exist_ok=True)
         self.mode = mode
@@ -71,7 +71,7 @@ class CheckPoint():
 
     def __call__(self, epoch, val):
         val = float(val)
-        if self.val == None:
+        if self.val is None:
             self.update_and_save(epoch, val)
         elif self.mode == 'min' and val < self.val:
             self.update_and_save(epoch, val)
