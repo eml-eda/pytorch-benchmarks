@@ -137,7 +137,7 @@ def get_data(data_dir: Optional[str] = None,
             test_set = Linaige(x_test, y_test)
         else:
             test_set = None
-        return train_set, test_set, class_weights
+        return train_set, test_set, None, class_weights
     else:
         dataset_cv = _cross_validation(data, win_size, confindence,
                                        remove_frame, classification, majority_win)
