@@ -432,7 +432,7 @@ def _cross_validation(data: pd.DataFrame,
                 # To vstack an empty array with another array (n_D) we need
                 # to check the array exists and
                 # then align the dimension for concat to have (x_train_w.shape[0], num_w, 8, 8)
-                if x_test.size:
+                if x_test_w.size:
                     x_test_w = np.vstack([x_test_w, x_combined_reshape])
                 else:
                     x_test_w = x_combined_reshape
