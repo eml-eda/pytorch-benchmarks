@@ -553,7 +553,7 @@ def _get_session(data: pd.DataFrame,
             # vstack an empty array with another array (n_D:
             # need to check the array existence
             # then align the dimension for concat to have (x_train_w.shape[0], num_w, 8, 8)
-            if x_train.size:
+            if x_train_w.size:
                 x_train_w = np.vstack([x_train_w, x_combined_reshape])
             else:
                 x_train_w = x_combined_reshape
