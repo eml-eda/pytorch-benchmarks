@@ -56,13 +56,15 @@ class CheckPoint():
     """
     save/load a checkpoint based on a metric
     """
-    def __init__(self, dir, net, optimizer, mode='min', fmt='ck_{epoch:03d}.pt'):
+    def __init__(self, dir, net, optimizer,
+                 mode='min', fmt='ck_{epoch:03d}.pt', save_best_only=False):
         if mode not in ['min', 'max']:
             raise ValueError("Early-stopping mode not supported")
         self.dir = pathlib.Path(dir)
         self.dir.mkdir(parents=True, exist_ok=True)
         self.mode = mode
         self.format = fmt
+        self.save_best_only = save_best_only
         self.net = net
         self.optimizer = optimizer
         self.val = None
@@ -85,7 +87,10 @@ class CheckPoint():
         self.save()
 
     def update_best_path(self):
-        self.best_path = self.dir / self.format.format(**self.__dict__)
+        if not self.save_best_only:
+            self.best_path = self.dir / self.format.format(**self.__dict__)
+        else:
+            self.best_path = self.dir / 'best.pt'
 
     def save(self, path=None):
         if path is None:
