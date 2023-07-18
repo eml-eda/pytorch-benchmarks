@@ -184,27 +184,21 @@ def evaluate(model: nn.Module,
                 'MSE': avgmse.get(),
                 'MAE': avgmae.get(),
             }
-    '''
     else:
         pred_labels = np.array([])
-        truth_labels = np.array([])
 
         with torch.no_grad():
             for sample, target in data:
-
                 sample, target = sample.to(device), target.to(device)
-
                 for i in range(len(sample)):
-
                     output = model(sample[i])
-
                     if classification:
                         pred = output.argmax(dim=1)
-                        winner_class = winner_selection(pred.numpy())
+                        winner_class = _winner_selection(pred.numpy())
                         pred_labels = np.append(pred_labels, winner_class)
                     else:
                         pred = output.detach().numpy().round()
-                        winner_class = winner_selection(pred)
+                        winner_class = _winner_selection(pred)
                         pred_labels = np.append(pred_labels, winner_class)
 
             bas = balanced_accuracy_score(target, pred_labels)
@@ -214,7 +208,7 @@ def evaluate(model: nn.Module,
             mae = mean_absolute_error(target, pred_labels)
 
             final_metrics = {
-                        'loss':0,
+                        'loss': 0,
                         'BAS': bas,
                         'ACC': acc,
                         'ROC': 0,
@@ -222,7 +216,6 @@ def evaluate(model: nn.Module,
                         'MSE': mse,
                         'MAE': mae,
                         }
-    '''
     return final_metrics
 
 

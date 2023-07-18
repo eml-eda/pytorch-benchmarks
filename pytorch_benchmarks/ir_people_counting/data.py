@@ -91,7 +91,8 @@ def get_data(data_dir: Optional[str] = None,
     :param win_size: the number of windows to be considered.
     It can be from 1 (no windowing) to any integer odd number (default: 1)
     :type win_size: int
-    :param confidence: TODO: a che serve? (default: 'easy')
+    :param confidence: control which samples will be considered.
+    If 'easy' samples with high labeling confindence are considered (default: 'easy')
     :type confidence: Literal['easy', 'all']
     :param remove_frame: remove first 8 frames of test set.
     Needed for making comparison fair (default: True)
@@ -103,9 +104,13 @@ def get_data(data_dir: Optional[str] = None,
     a generator will be returned. Conversely, if it is an int the specific
     session data will be returned with corresponding class weights (default: None)
     :type session_number: Optional[int]
-    :param test_split: TODO: a che serve? (default: None)
+    :param test_split: the percentage of data of a specific session
+    to be used as test (default: None)
     :type test_split: Optional[float]
-    :param majority_win: TODO: do we really need this argument? (default: None)
+    :param majority_win: the window size to be considered for majority ensembling.
+    The test set will contain data properly shaped to support ensembling.
+    If it is None no ensembling will be performed
+    and a standard test set will be returned (default: None)
     :type majority_win: Optional[int]
     :param seed: an optional seed for reproducibility (default: None)
     :type seed: Optional[int]
@@ -137,7 +142,7 @@ def get_data(data_dir: Optional[str] = None,
             test_set = Linaige(x_test, y_test)
         else:
             test_set = None
-        return train_set, test_set, None, class_weights
+        return train_set, test_set, class_weights
     else:
         dataset_cv = _cross_validation(data, win_size, confindence,
                                        remove_frame, classification, majority_win)
@@ -150,7 +155,7 @@ def build_dataloaders(datasets: Tuple[Dataset, ...],
                       seed: Optional[int] = None,
                       ) -> Tuple[DataLoader, DataLoader]:
     # Extracting datasets from get_data function
-    train_set, test_set, _, _ = datasets
+    train_set, test_set, _ = datasets
 
     # Maybe fix seed of RNG
     if seed is not None:
@@ -178,7 +183,7 @@ def build_dataloaders(datasets: Tuple[Dataset, ...],
 
     test_loader = DataLoader(
         test_set,
-        batch_size=batch_size,
+        batch_size=len(test_set),
         shuffle=False,
         num_workers=num_workers,
         worker_init_fn=worker_init_fn,
@@ -255,7 +260,7 @@ def _cross_validation(data: pd.DataFrame,
     # Finding how many distinct sessions exist
     session_number = set(data.loc[:, 'session'])
 
-    # Reshaping vector(64,) of pixels to (1,8,8)
+    # Reshaping vector(64,) of pixels to (1, 8, 8)
     # Storing tuple of (images, labels) of each session in sessions_image_label
     # Seperating data for each specific session
     sessions_image_label = list()
@@ -354,10 +359,12 @@ def _cross_validation(data: pd.DataFrame,
 
             # Build dataset
             train_set = Linaige(x_train, y_train)
-            test_set = Linaige(x_test, y_test)
-            majority_test_set = Linaige(x_test_majority, y_test_majority)
+            if majority_win is None:
+                test_set = Linaige(x_test, y_test)
+            else:
+                test_set = Linaige(x_test_majority, y_test_majority)
 
-            yield train_set, test_set, majority_test_set, class_weights
+            yield train_set, test_set, class_weights
             remove_session -= 1
     else:  # windowing implementation
         # Determining the last session to be the test set
@@ -454,34 +461,16 @@ def _cross_validation(data: pd.DataFrame,
                 x_test_w = x_test_w[cutting_index:]
                 y_test_w = y_test_w[cutting_index:]
 
-            # Shuffling both train and test datasets
-            # test_indices = np.arange(x_test_w.shape[0])
-            # np.random.shuffle(test_indices)
-
-            # x_test = x_test_w[test_indices]
             x_test = x_test_w
-            # y_test = y_test_w[test_indices]
             y_test = y_test_w
-
-            # train_indices = np.arange(x_train_w.shape[0])
-            # np.random.shuffle(train_indices)
-
-            # x_train = x_train_w[train_indices]
             x_train = x_train_w
-            # y_train = y_train_w[train_indices]
             y_train = y_train_w
-
-            # pickle_dict = {'removed_session': remove_session,
-            #                'x_train': x_train, 'y_train': y_train,
-            #                'x_test': x_test, 'y_test': y_test}
-            # with open('./pickle_file_window', 'wb') as f:
-            #     pickle.dump(pickle_dict, f, pickle.HIGHEST_PROTOCOL)
 
             # Build dataset
             train_set = Linaige(x_train, y_train)
             test_set = Linaige(x_test, y_test)
 
-            yield train_set, test_set, None, class_weights
+            yield train_set, test_set, class_weights
             remove_session -= 1
 
 
@@ -564,7 +553,7 @@ def _get_session(data: pd.DataFrame,
         # Build numpy array of labels with shape (y_train_w.shape[0])
         y_train_w = np.array(y_train_w_list)
         if test_split is not None:
-            # TODO: originally random_state was None...
+            # NB: originally random_state was None...
             train_and_test = train_test_split(x_train_w, y_train_w,
                                               test_size=test_split,
                                               random_state=seed,

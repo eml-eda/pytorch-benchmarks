@@ -32,6 +32,7 @@ N_EPOCHS = 500
 WIN_SIZE = 1
 CLASSIFICATION = True
 CLASS_NUM = 4
+MAJORITY_WIN = 5
 
 # No need to use GPU on this task
 device = torch.device("cpu")
@@ -47,6 +48,7 @@ ds_linaige_cv = irpc.get_data(win_size=WIN_SIZE,
                               classification=CLASSIFICATION,
                               session_number=None,
                               test_split=None,
+                              majority_win=MAJORITY_WIN,
                               seed=seed)
 
 # Build model_config dict
@@ -100,7 +102,8 @@ for data in ds_linaige_cv:
             break
     # Compute test metrics
     test_metrics = irpc.evaluate(model, criterion, test_dl,
-                                 device, CLASSIFICATION, CLASS_NUM)
+                                 device, CLASSIFICATION, CLASS_NUM,
+                                 MAJORITY_WIN)
     # Unpack and save metrics for current fold
     loss_list.append(test_metrics['loss'])
     bas_list.append(test_metrics['BAS'])
