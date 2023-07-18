@@ -181,14 +181,17 @@ def build_dataloaders(datasets: Tuple[Dataset, ...],
         generator=generator,
     )
 
-    test_loader = DataLoader(
-        test_set,
-        batch_size=len(test_set),
-        shuffle=False,
-        num_workers=num_workers,
-        worker_init_fn=worker_init_fn,
-        generator=generator,
-    )
+    if test_set is not None:
+        test_loader = DataLoader(
+            test_set,
+            batch_size=len(test_set),
+            shuffle=False,
+            num_workers=num_workers,
+            worker_init_fn=worker_init_fn,
+            generator=generator,
+        )
+    else:
+        test_loader = None
 
     # TODO: wtf is this...
     '''
