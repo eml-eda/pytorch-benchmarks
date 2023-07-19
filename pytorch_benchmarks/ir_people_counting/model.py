@@ -36,12 +36,16 @@ def get_reference_model(model_name: str, model_config: Optional[Dict[str, Any]] 
     use_2nd_conv = model_config.get('use_2nd_conv', True)
     use_2nd_lin = model_config.get('use_2nd_lin', True)
 
-    model_zoo = ['simple_cnn', 'cnn_tcn']
+    model_zoo = ['simple_cnn', 'concat_cnn', 'cnn_tcn']
 
     assert (model_name in model_zoo), f'Select a model from {model_zoo}'
 
     if model_name == 'simple_cnn':
         model = SimpleCNN(classification, win_size, class_num,
+                          out_ch_1, out_ch_2,
+                          use_pool, use_2nd_conv, use_2nd_lin)
+    elif model_name == 'concat_cnn':
+        model = ConcatCNN(classification, win_size, class_num,
                           out_ch_1, out_ch_2,
                           use_pool, use_2nd_conv, use_2nd_lin)
     elif model_name == 'cnn_tcn':
@@ -101,6 +105,73 @@ class SimpleCNN(nn.Module):
         # Optional 2nd conv
         if self.use_2nd_conv:
             x = F.relu(self.bn2(self.conv2(x)))
+        x = torch.flatten(x, 1)
+        # Optional 2nd linear
+        if self.use_2nd_lin:
+            x = F.relu(self.lin1(x))
+        # Output linear
+        x = self.lin2(x)
+        if not self.classification:
+            x = F.sigmoid(x)
+        return x
+
+
+class ConcatCNN(nn.Module):
+    def __init__(self, classification, win_size, class_num,
+                 out_ch_1, out_ch_2,
+                 use_pool, use_2nd_conv, use_2nd_lin):
+        super(ConcatCNN, self).__init__()
+        self.classification = classification
+        self.win_size = win_size
+        self.class_num = class_num
+        self.use_pool = use_pool
+        self.use_2nd_conv = use_2nd_conv
+        self.use_2nd_lin = use_2nd_lin
+        self.input_spat_dim = 8
+        # Input convolution, always present
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=out_ch_1,
+                               kernel_size=3, bias=False)
+        self.bn1 = nn.BatchNorm2d(num_features=out_ch_1)
+        self.spat_dim = self.input_spat_dim - 3 + 1
+        self.ch_dim = out_ch_1
+        # Optional pooling layer
+        if use_pool:
+            self.pool = nn.MaxPool2d(kernel_size=2)
+            self.spat_dim = self.spat_dim // 2
+        # Optional 2nd conv layer
+        if use_2nd_conv:
+            msg = 'To use two conv specify the "out_ch_2" argument.'
+            assert out_ch_2 is not None, msg
+            self.conv2 = nn.Conv2d(in_channels=out_ch_1, out_channels=out_ch_2,
+                                   kernel_size=3, bias=False)
+            self.bn2 = nn.BatchNorm2d(num_features=out_ch_2)
+            self.spat_dim = self.spat_dim - 3 + 1
+            self.ch_dim = out_ch_2
+        # Optional 2nd linear layer
+        if use_2nd_lin:
+            self.lin1 = nn.Linear(self.win_size * self.ch_dim * self.spat_dim**2, 64)
+            self.spat_dim = 1
+            self.ch_dim = 64  # Apparently this is hard-coded to 64
+        # Output linear, always present
+        if classification:
+            self.lin2 = nn.Linear(self.ch_dim * self.spat_dim**2, class_num)
+        else:
+            self.lin2 = nn.Linear(self.ch_dim * self.spat_dim**2, 1)
+
+    def forward(self, x):
+        feature_list = []
+        for x_i in x:
+            # Input convolution
+            x_i = F.relu(self.bn1(self.conv1(x_i)))
+            # Optional pooling
+            if self.use_pool:
+                x_i = self.pool(x_i)
+            # Optional 2nd conv
+            if self.use_2nd_conv:
+                x_i = F.relu(self.bn2(self.conv2(x_i)))
+            feature_list.append(x_i)
+        # Concat and flatten
+        x = torch.cat(feature_list, dim=1)
         x = torch.flatten(x, 1)
         # Optional 2nd linear
         if self.use_2nd_lin:

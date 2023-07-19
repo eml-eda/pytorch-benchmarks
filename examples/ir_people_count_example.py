@@ -17,6 +17,7 @@
 # * Author:  Matteo Risso <matteo.risso@polito.it>                             *
 # *----------------------------------------------------------------------------*
 
+import math
 from pathlib import Path
 
 import numpy as np
@@ -28,11 +29,12 @@ from pytorch_benchmarks.utils import seed_all, EarlyStopping
 
 
 DATA_DIR = Path('.')
+MODEL = 'concat_cnn'  # One of ['simple_cnn', 'concat_cnn', 'cnn_tcn']
 N_EPOCHS = 500
-WIN_SIZE = 1
+WIN_SIZE = 5  # One of [1, 3, 5, 7, 9]
 CLASSIFICATION = True
 CLASS_NUM = 4
-MAJORITY_WIN = 5
+MAJORITY_WIN = None  # One of [None, 3, 5, 7, 9]
 
 # No need to use GPU on this task
 device = torch.device("cpu")
@@ -52,6 +54,7 @@ ds_linaige_cv = irpc.get_data(win_size=WIN_SIZE,
                               seed=seed)
 
 # Build model_config dict
+# TODO: add out_fc (now hardcoded to 64)
 model_config = {'classification': CLASSIFICATION,
                 'win_size': WIN_SIZE,
                 'class_num': CLASS_NUM,
@@ -72,16 +75,23 @@ mse_list = []
 mae_list = []
 
 # Cross-val loop
+fold_samples = []
 for data in ds_linaige_cv:
     # Get the model
-    model = irpc.get_reference_model('simple_cnn', model_config)
+    model = irpc.get_reference_model(MODEL, model_config)
 
     # Get class weights
     class_weight = data[-1]
 
+    # Store the number of samples in the test-set of current fold
+    fold_samples.append(len(data[1]))
+
     # Model summary
-    input_example = torch.unsqueeze(data[0][0][0], 0)
-    print(summary(model, input_example.to(device), show_input=False, show_hierarchical=True))
+    input_example = torch.unsqueeze(data[0][0][0], 0).to(device)
+    if type(model).__name__ in ['ConcatCNN', 'CNN_TCN']:
+        input_example = [input_example[:, i, :, :].unsqueeze(1)
+                         for i in range(input_example.shape[1])]
+    print(summary(model, input_example, show_input=False, show_hierarchical=True))
 
     # Get Training Settings
     criterion = irpc.get_default_criterion(classification=CLASSIFICATION,
@@ -120,11 +130,27 @@ for data in ds_linaige_cv:
     print(f"Test Set F1: {test_metrics['F1']}")
     print(f"Test Set MSE: {test_metrics['MSE']}")
     print(f"Test Set MAE: {test_metrics['MAE']}")
+# Compute fold weights
+fold_weights = [s / sum(fold_samples) for s in fold_samples]
 # Final Summary
-print(f"Test Set loss: {loss_list} ({np.mean(loss_list)}+/-{np.std(loss_list)})")
-print(f"Test Set BAS: {bas_list} ({np.mean(bas_list)}+/-{np.std(bas_list)})")
-print(f"Test Set ACC: {acc_list} ({np.mean(acc_list)}+/-{np.std(acc_list)})")
-print(f"Test Set ROC: {roc_list} ({np.mean(roc_list)}+/-{np.std(roc_list)})")
-print(f"Test Set F1: {f1_list} ({np.mean(f1_list)}+/-{np.std(f1_list)})")
-print(f"Test Set MSE: {mse_list} ({np.mean(mse_list)}+/-{np.std(mse_list)})")
-print(f"Test Set MAE: {mae_list} ({np.mean(mae_list)}+/-{np.std(mae_list)})")
+avg_loss = np.average(loss_list, weights=fold_weights)
+std_loss = math.sqrt(np.average((loss_list-avg_loss)**2, weights=fold_weights))
+print(f"Test Set loss: {loss_list} ({avg_loss} +/- {std_loss})")
+avg_bas = np.average(bas_list, weights=fold_weights)
+std_bas = math.sqrt(np.average((bas_list-avg_bas)**2, weights=fold_weights))
+print(f"Test Set BAS: {bas_list} ({avg_bas} +/- {std_bas})")
+avg_acc = np.average(acc_list, weights=fold_weights)
+std_acc = math.sqrt(np.average((acc_list-avg_acc)**2, weights=fold_weights))
+print(f"Test Set ACC: {acc_list} ({avg_acc} +/- {std_acc})")
+avg_roc = np.average(roc_list, weights=fold_weights)
+std_roc = math.sqrt(np.average((roc_list-avg_roc)**2, weights=fold_weights))
+print(f"Test Set ROC: {roc_list} ({avg_roc} +/- {std_roc})")
+avg_f1 = np.average(f1_list, weights=fold_weights)
+std_f1 = math.sqrt(np.average((f1_list-avg_f1)**2, weights=fold_weights))
+print(f"Test Set F1: {f1_list} ({avg_f1} +/- {std_f1})")
+avg_mse = np.average(mse_list, weights=fold_weights)
+std_mse = math.sqrt(np.average((mse_list-avg_mse)**2, weights=fold_weights))
+print(f"Test Set MSE: {mse_list} ({avg_mse} +/- {std_mse})")
+avg_mae = np.average(mae_list, weights=fold_weights)
+std_mae = math.sqrt(np.average((mae_list-avg_mae)**2, weights=fold_weights))
+print(f"Test Set MAE: {mae_list} ({avg_mae} +/- {std_mae})")

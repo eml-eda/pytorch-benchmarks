@@ -76,11 +76,13 @@ def train_one_epoch(epoch: int,
             step += 1
             tepoch.update(1)
             sample, target = sample.to(device), target.to(device)
-            if type(model).__name__ == 'CNN_TCN':
-                sample_list = [sample[:, i, :, :].unsqueeze(1) for i in range(sample.shape[1])]
-                output, loss = _run_model_tcn(model, sample_list, target, criterion, class_number)
+            if type(model).__name__ in ['ConcatCNN', 'CNN_TCN']:
+                inp = [sample[:, i, :, :].unsqueeze(1) for i in range(sample.shape[1])]
+                # output, loss = _run_model_tcn(model, sample_list, target, criterion, class_number)
             else:
-                output, loss = _run_model(model, sample, target, criterion, class_number)
+                inp = sample
+                # output, loss = _run_model(model, sample, target, criterion, class_number)
+            output, loss = _run_model(model, inp, target, criterion, class_number)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -129,12 +131,14 @@ def evaluate(model: nn.Module,
             for sample, target in data:
                 step += 1
                 sample, target = sample.to(device), target.to(device)
-                if type(model).__name__ == 'CNN_TCN':
-                    sample_list = [sample[:, i, :, :].unsqueeze(1) for i in range(sample.shape[1])]
-                    output, loss = _run_model_tcn(model, sample_list, target,
-                                                  criterion, class_number)
+                if type(model).__name__ in ['ConcatCNN', 'CNN_TCN']:
+                    inp = [sample[:, i, :, :].unsqueeze(1) for i in range(sample.shape[1])]
+                    # output, loss = _run_model_tcn(model, sample_list, target,
+                    #                               criterion, class_number)
                 else:
-                    output, loss = _run_model(model, sample, target, criterion, class_number)
+                    inp = sample
+                    # output, loss = _run_model(model, sample, target, criterion, class_number)
+                output, loss = _run_model(model, inp, target, criterion, class_number)
                 # Computing average loss
                 avgloss.update(loss, sample.size(0))
                 # Compute roc
