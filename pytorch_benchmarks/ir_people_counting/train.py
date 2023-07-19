@@ -76,7 +76,7 @@ def train_one_epoch(epoch: int,
             step += 1
             tepoch.update(1)
             sample, target = sample.to(device), target.to(device)
-            if type(model).__name__ in ['ConcatCNN', 'CNN_TCN']:
+            if type(model).__name__ in ['ConcatCNN', 'CNNTCN']:
                 inp = [sample[:, i, :, :].unsqueeze(1) for i in range(sample.shape[1])]
                 # output, loss = _run_model_tcn(model, sample_list, target, criterion, class_number)
             else:
@@ -131,7 +131,7 @@ def evaluate(model: nn.Module,
             for sample, target in data:
                 step += 1
                 sample, target = sample.to(device), target.to(device)
-                if type(model).__name__ in ['ConcatCNN', 'CNN_TCN']:
+                if type(model).__name__ in ['ConcatCNN', 'CNNTCN']:
                     inp = [sample[:, i, :, :].unsqueeze(1) for i in range(sample.shape[1])]
                     # output, loss = _run_model_tcn(model, sample_list, target,
                     #                               criterion, class_number)

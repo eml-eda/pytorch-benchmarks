@@ -29,7 +29,7 @@ from pytorch_benchmarks.utils import seed_all, EarlyStopping
 
 
 DATA_DIR = Path('.')
-MODEL = 'concat_cnn'  # One of ['simple_cnn', 'concat_cnn', 'cnn_tcn']
+MODEL = 'cnn_tcn'  # One of ['simple_cnn', 'concat_cnn', 'cnn_tcn']
 N_EPOCHS = 500
 WIN_SIZE = 5  # One of [1, 3, 5, 7, 9]
 CLASSIFICATION = True
@@ -88,7 +88,7 @@ for data in ds_linaige_cv:
 
     # Model summary
     input_example = torch.unsqueeze(data[0][0][0], 0).to(device)
-    if type(model).__name__ in ['ConcatCNN', 'CNN_TCN']:
+    if type(model).__name__ in ['ConcatCNN', 'CNNTCN']:
         input_example = [input_example[:, i, :, :].unsqueeze(1)
                          for i in range(input_example.shape[1])]
     print(summary(model, input_example, show_input=False, show_hierarchical=True))
