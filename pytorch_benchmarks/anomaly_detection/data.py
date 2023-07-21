@@ -17,6 +17,7 @@
 # * Author:  Matteo Risso <matteo.risso@polito.it>                             *
 # *----------------------------------------------------------------------------*
 
+import random
 from typing import Tuple
 import os
 import requests
@@ -245,7 +246,8 @@ class ToyCarTest(Dataset):
 
 
 def get_data(data_dir=None,
-             val_split=0.1
+             val_split=0.1,
+             seed=None,
              ) -> Tuple[Dataset, Dataset, list[Dataset]]:
     if data_dir is None:
         data_dir = os.path.join(os.getcwd(), 'amd_data')
@@ -264,10 +266,17 @@ def get_data(data_dir=None,
         with zipfile.ZipFile(eval_zip, 'r') as zip_ref:
             zip_ref.extractall(data_dir)
 
+    # Maybe fix seed of RNG
+    if seed is not None:
+        generator = torch.Generator().manual_seed(seed)
+    else:
+        generator = None
+
     ds_train_val = ToyCar(data_dir)
     val_len = int(val_split * len(ds_train_val))
     train_len = len(ds_train_val) - val_len
-    ds_train, ds_val = random_split(ds_train_val, [train_len, val_len])
+    ds_train, ds_val = random_split(ds_train_val, [train_len, val_len],
+                                    generator=generator)
 
     machine_id_list = _get_machine_id_list_for_test(target_dir=data_dir)
     ds_test = []
@@ -278,25 +287,48 @@ def get_data(data_dir=None,
 
 def build_dataloaders(datasets: Tuple[Dataset, Dataset, list[Dataset]],
                       batch_size=512,
-                      num_workers=2
+                      num_workers=2,
+                      seed=None
                       ) -> Tuple[DataLoader, DataLoader, list[DataLoader]]:
     train_set, val_set, test_set = datasets
+
+    # Maybe fix seed of RNG
+    if seed is not None:
+        generator = torch.Generator().manual_seed(seed)
+    else:
+        generator = None
+
+    # Maybe define worker init fn
+    if seed is not None:
+        def worker_init_fn(worker_id):
+            np.random.seed(seed)
+            random.seed(seed)
+    else:
+        worker_init_fn = None
+
     train_loader = DataLoader(
         train_set,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
+        worker_init_fn=worker_init_fn,
+        generator=generator,
     )
     val_loader = DataLoader(
         val_set,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
+        worker_init_fn=worker_init_fn,
+        generator=generator,
     )
     test_loader = []
     for dataset in test_set:
         test_loader.append(DataLoader(
             dataset,
             shuffle=False,
-            num_workers=num_workers))
+            num_workers=num_workers,
+            worker_init_fn=worker_init_fn,
+            generator=generator,
+            ))
     return train_loader, val_loader, test_loader

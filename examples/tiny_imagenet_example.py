@@ -30,8 +30,8 @@ print("Training on:", device)
 seed = seed_all(seed=42)
 
 # Get the Data with 224pixel resolution as full-imagenet
-datasets = tin.get_data(inp_res=224)
-dataloaders = tin.build_dataloaders(datasets)
+datasets = tin.get_data(inp_res=224, seed=seed)
+dataloaders = tin.build_dataloaders(datasets, seed=seed)
 train_dl, val_dl, test_dl = dataloaders
 
 # Get pretrained Model on full imagenet with standard ResNet18 head
@@ -64,8 +64,8 @@ print("Test Set Loss Pretraining:", test_metrics['loss'])
 print("Test Set Accuracy Pretraining:", test_metrics['acc'])
 
 # Get the Data with 64pixel resolution as full-imagenet
-datasets = tin.get_data(inp_res=64)
-dataloaders = tin.build_dataloaders(datasets)
+datasets = tin.get_data(inp_res=64, seed=seed)
+dataloaders = tin.build_dataloaders(datasets, seed=seed)
 train_dl, val_dl, test_dl = dataloaders
 
 # Now, get Model with reduced ResNet18 head

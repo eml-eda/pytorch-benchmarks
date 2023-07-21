@@ -14,50 +14,61 @@
 # * See the License for the specific language governing permissions and        *
 # * limitations under the License.                                             *
 # *                                                                            *
-# * Author:  Matteo Risso <matteo.risso@polito.it>                             *
+# * Author:  Leonardo Tredese <s302294@studenti.polito.it>                     *
 # *----------------------------------------------------------------------------*
 
 import torch
-from pytorch_model_summary import summary
-import pytorch_benchmarks.keyword_spotting as kws
+import pytorch_benchmarks.transformers.image_classification as icl
 from pytorch_benchmarks.utils import seed_all
+import os
 
 # Check CUDA availability
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("Training on:", device)
 
-# Ensure determinstic execution
+# Ensure deterministic execution
 seed = seed_all(seed=42)
 
+# impose dataset information
+dataset_name = 'cifar10'
+num_classes = 10
+
 # Get the Data
-# use commented line for TCResNet14
-# datasets = kws.get_data(one_dim=True)
-datasets = kws.get_data()
-dataloaders = kws.build_dataloaders(datasets, seed=seed)
+batch_size = 64
+update_frequency = 128 // batch_size
+datasets = icl.get_data(dataset_name, download=True)
+dataloaders = icl.build_dataloaders(datasets,
+                                    batch_size=batch_size,
+                                    num_workers=os.cpu_count(),
+                                    seed=seed)
 train_dl, val_dl, test_dl = dataloaders
 
 # Get the Model
-# use commented line for TCResNet14
-# model = kws.get_reference_model('tc_resnet_14')
-model = kws.get_reference_model('ds_cnn')
+model_config = {
+    'num_classes': num_classes,
+    'is_encoder_frozen': False,
+    'from_scratch': False
+}
+model = icl.get_reference_model(model_name='vit_small_patch16_384', model_config=model_config)
 if torch.cuda.is_available():
     model = model.cuda()
 
-# Model Summary
-input_example = torch.unsqueeze(datasets[0][0][0], 0)
-print(summary(model, input_example.to(device), show_input=False, show_hierarchical=True))
-
 # Get Training Settings
-criterion = kws.get_default_criterion()
-optimizer = kws.get_default_optimizer(model)
-scheduler = kws.get_default_scheduler(optimizer)
+N_EPOCHS = 20
+criterion = icl.get_default_criterion()
+optimizer = icl.get_default_optimizer(model)
+scheduler_config = {
+        'epochs': N_EPOCHS,
+        'update_frequency': update_frequency,
+        'trainset_len': len(train_dl.dataset)
+}
+scheduler = icl.get_default_scheduler(optimizer, scheduler_config=scheduler_config)
 
 # Training Loop
-N_EPOCHS = 36
 for epoch in range(N_EPOCHS):
-    _ = kws.train_one_epoch(epoch, model, criterion, optimizer, train_dl, val_dl, device)
-    scheduler.step()
-test_metrics = kws.evaluate(model, criterion, test_dl, device)
+    _ = icl.train_one_epoch(epoch, model, criterion, optimizer,
+                            update_frequency, scheduler, train_dl, val_dl, device)
+test_metrics = icl.evaluate(model, criterion, test_dl, device)
 
 print("Test Set Loss:", test_metrics['loss'])
 print("Test Set Accuracy:", test_metrics['acc'])

@@ -17,6 +17,7 @@
 # * Author:  Matteo Risso <matteo.risso@polito.it>                             *
 # *----------------------------------------------------------------------------*
 
+import os
 import pathlib
 import random
 
@@ -238,6 +239,8 @@ def seed_all(seed=None):
         np.random.seed(seed)
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
+        cudnn.deterministic = True
         cudnn.benchmark = False
         torch.use_deterministic_algorithms(True)
+        os.environ['PYTHONHASHSEED'] = str(seed)
     return seed

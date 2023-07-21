@@ -31,8 +31,8 @@ print("Training on:", device)
 seed = seed_all(seed=42)
 
 # Get the Data
-datasets = amd.get_data()
-dataloaders = amd.build_dataloaders(datasets)
+datasets = amd.get_data(seed=seed)
+dataloaders = amd.build_dataloaders(datasets, seed=seed)
 train_dl, val_dl, test_dl = dataloaders
 
 # Get the Model

@@ -200,26 +200,48 @@ def get_data(data_dir=None,
 
 def build_dataloaders(datasets: Tuple[Dataset, ...],
                       batch_size=128,
-                      num_workers=4
+                      num_workers=4,
+                      seed=None,
                       ) -> Tuple[DataLoader, DataLoader, DataLoader]:
     train_set, val_set, test_set = datasets
+
+    # Maybe fix seed of RNG
+    if seed is not None:
+        generator = torch.Generator().manual_seed(seed)
+    else:
+        generator = None
+
+    # Maybe define worker init fn
+    if seed is not None:
+        def worker_init_fn(worker_id):
+            np.random.seed(seed)
+            random.seed(seed)
+    else:
+        worker_init_fn = None
+
     train_loader = DataLoader(
         train_set,
         batch_size=batch_size,
         shuffle=True,
         pin_memory=True,
         num_workers=num_workers,
+        worker_init_fn=worker_init_fn,
+        generator=generator,
     )
     val_loader = DataLoader(
         val_set,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
+        worker_init_fn=worker_init_fn,
+        generator=generator,
     )
     test_loader = DataLoader(
         test_set,
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
+        worker_init_fn=worker_init_fn,
+        generator=generator,
     )
     return train_loader, val_loader, test_loader

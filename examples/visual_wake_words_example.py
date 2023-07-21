@@ -30,8 +30,8 @@ print("Training on:", device)
 seed = seed_all(seed=42)
 
 # Get the Data
-datasets = vww.get_data()
-dataloaders = vww.build_dataloaders(datasets)
+datasets = vww.get_data(seed=seed)
+dataloaders = vww.build_dataloaders(datasets, seed=seed)
 train_dl, val_dl, test_dl = dataloaders
 
 # Get the Model
