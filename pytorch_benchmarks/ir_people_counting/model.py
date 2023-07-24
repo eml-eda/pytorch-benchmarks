@@ -35,6 +35,7 @@ def get_reference_model(model_name: str, model_config: Optional[Dict[str, Any]] 
     use_pool = model_config.get('use_pool', False)
     use_2nd_conv = model_config.get('use_2nd_conv', True)
     use_2nd_lin = model_config.get('use_2nd_lin', True)
+    same_padding = model_config.get('same_padding', False)
 
     model_zoo = ['simple_cnn', 'concat_cnn', 'cnn_tcn']
 
@@ -43,7 +44,8 @@ def get_reference_model(model_name: str, model_config: Optional[Dict[str, Any]] 
     if model_name == 'simple_cnn':
         model = SimpleCNN(classification, win_size, class_num,
                           out_ch_1, out_ch_2,
-                          use_pool, use_2nd_conv, use_2nd_lin)
+                          use_pool, use_2nd_conv, use_2nd_lin,
+                          same_padding)
     elif model_name == 'concat_cnn':
         model = ConcatCNN(classification, win_size, class_num,
                           out_ch_1, out_ch_2,
@@ -59,7 +61,8 @@ def get_reference_model(model_name: str, model_config: Optional[Dict[str, Any]] 
 class SimpleCNN(nn.Module):
     def __init__(self, classification, win_size, class_num,
                  out_ch_1, out_ch_2,
-                 use_pool, use_2nd_conv, use_2nd_lin):
+                 use_pool, use_2nd_conv, use_2nd_lin,
+                 same_padding):
         super(SimpleCNN, self).__init__()
         self.classification = classification
         self.win_size = win_size
@@ -67,12 +70,14 @@ class SimpleCNN(nn.Module):
         self.use_pool = use_pool
         self.use_2nd_conv = use_2nd_conv
         self.use_2nd_lin = use_2nd_lin
+        self.same_padding = same_padding
         self.input_spat_dim = 8
         # Input convolution, always present
+        pad = (3 - 1) // 2 if same_padding else 0
         self.conv1 = nn.Conv2d(in_channels=win_size, out_channels=out_ch_1,
-                               kernel_size=3, bias=False)
+                               kernel_size=3, bias=False, padding=pad)
         self.bn1 = nn.BatchNorm2d(num_features=out_ch_1)
-        self.spat_dim = self.input_spat_dim - 3 + 1
+        self.spat_dim = self.input_spat_dim - 3 + 1 + 2 * pad
         self.ch_dim = out_ch_1
         # Optional pooling layer
         if use_pool:
@@ -82,10 +87,11 @@ class SimpleCNN(nn.Module):
         if use_2nd_conv:
             msg = 'To use two conv specify the "out_ch_2" argument.'
             assert out_ch_2 is not None, msg
+            pad = (3 - 1) // 2 if same_padding else 0
             self.conv2 = nn.Conv2d(in_channels=out_ch_1, out_channels=out_ch_2,
-                                   kernel_size=3, bias=False)
+                                   kernel_size=3, bias=False, padding=pad)
             self.bn2 = nn.BatchNorm2d(num_features=out_ch_2)
-            self.spat_dim = self.spat_dim - 3 + 1
+            self.spat_dim = self.spat_dim - 3 + 1 + 2 * pad
             self.ch_dim = out_ch_2
         # Optional 2nd linear layer
         if use_2nd_lin:

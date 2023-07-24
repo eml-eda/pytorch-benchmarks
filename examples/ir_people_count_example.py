@@ -29,9 +29,9 @@ from pytorch_benchmarks.utils import seed_all, EarlyStopping
 
 
 DATA_DIR = Path('.')
-MODEL = 'cnn_tcn'  # One of ['simple_cnn', 'concat_cnn', 'cnn_tcn']
+MODEL = 'simple_cnn'  # One of ['simple_cnn', 'concat_cnn', 'cnn_tcn']
 N_EPOCHS = 500
-WIN_SIZE = 5  # One of [1, 3, 5, 7, 9]
+WIN_SIZE = 1  # One of [1, 3, 5, 7, 9]
 CLASSIFICATION = True
 CLASS_NUM = 4
 MAJORITY_WIN = None  # One of [None, 3, 5, 7, 9]
@@ -63,6 +63,7 @@ model_config = {'classification': CLASSIFICATION,
                 'use_pool': True,
                 'use_2nd_conv': True,
                 'use_2nd_lin': True,
+                'same_padding': True,
                 }
 
 # Build lists where to store results
