@@ -337,7 +337,7 @@ def _cross_validation(data: pd.DataFrame,
                 x_test_majority, y_test_majority = data
 
                 test_indices_majority = np.arange(x_test_majority.shape[0])
-                np.random.shuffle(test_indices_majority)
+                # np.random.shuffle(test_indices_majority)
 
                 x_test_majority = x_test_majority[test_indices_majority]
                 y_test_majority = y_test_majority[test_indices_majority]
