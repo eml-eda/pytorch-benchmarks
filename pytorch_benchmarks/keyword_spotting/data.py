@@ -27,6 +27,7 @@ import pickle
 from typing import Tuple
 
 import numpy as np
+import tarfile
 import torch
 from torch import Tensor
 from torch.hub import download_url_to_file
@@ -34,7 +35,7 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 import torchaudio
 # from torchaudio.datasets.utils import download_url,
-from torchaudio.datasets.utils import extract_archive
+# from torchaudio.datasets.utils import extract_archive
 from tqdm import tqdm
 
 SAMPLE_RATE = 16000
@@ -277,7 +278,9 @@ class SpeechCommands(Dataset):
                     checksum = _CHECKSUMS.get(url, None)
                     # download_url(url, root, hash_value=checksum, hash_type="md5")
                     download_url_to_file(url, archive, hash_prefix=checksum)
-                extract_archive(archive, self._path)
+                # extract_archive(archive, self._path)
+                with tarfile.open(archive, "r:gz") as tar:
+                    tar.extractall(path=self._path)
 
         output_file = root + f'/{subset}.pkl' if not one_dim else root + f'/{subset}_onedim.pkl'
         subset_exist = os.path.isfile(output_file)
