@@ -132,11 +132,11 @@ class TEMPONet(nn.Module):
         k_tcb00 = ceil(self.rf[0]/self.dil[0])
         self.tcb00 = TempConvBlock(ch_in=4, ch_out=self.ch[0],
                                    k_size=k_tcb00, dil=self.dil[0],
-                                   pad=((k_tcb00-1)*self.dil[0]+1)//2)
+                                   pad='same')
         k_tcb01 = ceil(self.rf[1]/self.dil[1])
         self.tcb01 = TempConvBlock(ch_in=self.ch[0], ch_out=self.ch[1],
                                    k_size=k_tcb01, dil=self.dil[1],
-                                   pad=((k_tcb01-1)*self.dil[1]+1)//2)
+                                   pad='same')
         k_cb0 = ceil(self.rf[2]/self.dil[2])
         self.cb0 = ConvBlock(ch_in=self.ch[1], ch_out=self.ch[2],
                              k_size=k_cb0, s=1, dilation=self.dil[2],
@@ -146,11 +146,11 @@ class TEMPONet(nn.Module):
         k_tcb10 = ceil(self.rf[3]/self.dil[3])
         self.tcb10 = TempConvBlock(ch_in=self.ch[2], ch_out=self.ch[3],
                                    k_size=k_tcb10, dil=self.dil[3],
-                                   pad=((k_tcb10-1)*self.dil[3]+1)//2)
+                                   pad='same')
         k_tcb11 = ceil(self.rf[4]/self.dil[4])
         self.tcb11 = TempConvBlock(ch_in=self.ch[3], ch_out=self.ch[4],
                                    k_size=k_tcb11, dil=self.dil[4],
-                                   pad=((k_tcb11-1)*self.dil[4]+1)//2)
+                                   pad='same')
         self.cb1 = ConvBlock(ch_in=self.ch[4], ch_out=self.ch[5],
                              k_size=5, s=2, pad=2)
 
@@ -158,11 +158,11 @@ class TEMPONet(nn.Module):
         k_tcb20 = ceil(self.rf[5]/self.dil[5])
         self.tcb20 = TempConvBlock(ch_in=self.ch[5], ch_out=self.ch[6],
                                    k_size=k_tcb20, dil=self.dil[5],
-                                   pad=((k_tcb20-1)*self.dil[5]+1)//2)
+                                   pad='same')
         k_tcb21 = ceil(self.rf[6]/self.dil[6])
         self.tcb21 = TempConvBlock(ch_in=self.ch[6], ch_out=self.ch[7],
                                    k_size=k_tcb21, dil=self.dil[6],
-                                   pad=((k_tcb21-1)*self.dil[6]+1)//2)
+                                   pad='same')
         self.cb2 = ConvBlock(ch_in=self.ch[7], ch_out=self.ch[8],
                              k_size=5, s=4, pad=4)
 
