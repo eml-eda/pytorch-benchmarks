@@ -16,6 +16,7 @@
 # *                                                                            *
 # * Author:  Leonardo Tredese <s302294@studenti.polito.it>                     *
 # *----------------------------------------------------------------------------*
+
 import random
 from typing import Literal
 import os
