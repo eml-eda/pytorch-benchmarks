@@ -81,7 +81,9 @@ def windowing(X_instants, R_instants, Y_instants,
             is_steady_windows[m] = len(set(Y_instants[c - r: c + r])) == 1
         else:
             is_steady_windows[m] = len(set(
-                Y_instants[c - r - margin_samples:c + r + margin_samples])) == 1
+                Y_instants[
+                    max(0, c - r - margin_samples):min(c + r + margin_samples, len(Y_instants))
+                    ])) == 1
     if steady:
         return (X_windows[is_steady_windows], R_windows[is_steady_windows],
                 Y_windows[is_steady_windows])
